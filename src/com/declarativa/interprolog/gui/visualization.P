@@ -1,0 +1,167 @@
+/* 
+Author: Miguel Calejo
+Contact: info@interprolog.com, www.interprolog.com
+Copyright InterProlog Consulting / Renting Point Lda, Portugal 2014
+Use and distribution, without any warranties, under the terms of the
+Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
+*/
+/* IMPORTANT WARNING:  THIS FILE WAS EXTRACTED FROM THE INTERPROLOG JAR FILE.
+   If you decide to edit, compile it with XSB Prolog and rebuild the jar file.
+   Simply saving the text file is not enough.
+*/
+
+% Not a Prolog module, as most predicates are exported
+
+% asserted to usermod by the Java side on startup
+:- dynamic ipFontSize/1, ipListenerWindow/1, ipEngineController/1.
+% asserted by  interprolog.P/pl/etc 
+:- dynamic ipInterprologModule/1.
+
+% :- import java/2, javaMessage/3, javaMessage/2, javaMessage/7, buildTermModels/2, buildTermModel/2, ipObjectSpec/4, ipObjectTemplate/5, ipPrologEngine/1 from interprolog.
+% This is more compatible with other Prologs:
+% This is needed for YAP/SWI:
+%:- absolute_file_name(interprolog,[relative_to('/Users/mc/git/fidji/interprologForJDK/src/com/declarativa/interprolog/yap')],I), use_module(I,[javaMessage/3, javaMessage/2, javaMessage/7, buildTermModels/2, buildTermModel/2, buildTermModelList_2/2, ipObjectSpec/4, ipObjectTemplate/5, ipPrologEngine/1]).
+
+:- ipInterprologModule(I), use_module(I,[javaMessage/3, javaMessage/2, javaMessage/7, buildTermModels/2, buildTermModel/2, buildTermModelList_2/2, ipObjectSpec/4, ipObjectTemplate/5, ipPrologEngine/1]).
+	
+/**** Fact collection browser ****/
+
+%browseLiteralInstances(GroundTerm,Instances)
+%example: browseLiteralInstances(country(name,continent),[continent(usa,america),continent(portugal,europe)])
+browseLiteralInstances(GroundTerm,Instances) :- 
+	buildTermModel(GroundTerm,TemplateModel),
+	buildTermModels(Instances,InstanceModels),
+	functor(GroundTerm,F,N), % some redundancy here, for some convenience to PredicateTableModel.java
+	ipObjectSpec('PredicateTableModel',Table,[N,F,TemplateModel,InstanceModels],_),
+	javaMessage('com.declarativa.interprolog.gui.PredicateTableWindow','PredicateTableWindow'(Table)).
+
+% uses ipObjectSpect('PredicateTableModel',Table,[Arity,Functor,TermModelTemplate,TermModelInstances],_)
+showObjectSpecs :-
+	findall(ipObjectSpec(Name,VNames,A,B),ipObjectSpec(Name,_,_,examples-[A,B]/VNames), Instances),
+	browseLiteralInstances(ipObjectSpec('Name','Variables','Example A','Example B'),Instances).
+
+showObjectTemplates :-
+	findall(ipObjectTemplate(Name,VNames,TSubs),ipObjectTemplate(Name,_Template,VNames,_TVars,TSubs), Instances),
+	browseLiteralInstances(ipObjectTemplate('Name','Variables','Example Bindings'),Instances).
+
+
+
+/**** Term and list browsers ****/
+
+% example: browseTerm(2+X=X*4)
+browseTerm(T) :- 
+	buildTermModel(T,M), ipPrologEngine(Engine),
+	ipObjectSpec('IPClassObject',Class,['com.declarativa.interprolog.gui.TermModelWindow'],_),
+	javaMessage(Class,_,null,'TermModelWindow',[M,Engine],0,_).
+
+% example: browseList([miguel(X),2+X=X*4,one(two(three))])
+browseList(L) :-
+	copy_term(L,LL),
+	%buildTermModelList(LL,1,_,NL),
+	buildTermModelList_2(LL,NL),
+	ipObjectSpec('TermListModel',List,[NL],_),
+	javaMessage('com.declarativa.interprolog.gui.TermListWindow','TermListWindow'(List)).
+	
+
+
+/**** Hierarchical multi-list term browser ****/
+
+% tree nodes represented as anyFunctor(Term,ChildrenList)
+buildTermTreeModel(X,Model) :- 
+	arg(2,X,[]), !, 
+	arg(1,X,T), buildTermModel(T,TM),
+	ipObjectTemplate('ArrayOfTermTreeModel',Children,_,[[]],_),
+	ipObjectTemplate('TermTreeModel',Model,_,[Children,TM],_).
+buildTermTreeModel(X,Model) :-
+	arg(1,X,T), buildTermModel(T,TM),
+	ipObjectTemplate('ArrayOfTermTreeModel',TMC,_,[Models],_),
+	ipObjectTemplate('TermTreeModel',Model,_,[TMC,TM],_),
+	arg(2,X,Children),
+	buildTermTreeModels(Children,Models).
+	
+buildTermTreeModels([],[]).
+buildTermTreeModels([C1|Cn],[M1|Mn]) :- 
+	buildTermTreeModel(C1,M1),
+	buildTermTreeModels(Cn,Mn).
+
+
+testbttm2 :-
+	ipObjectTemplate('ArrayOfString',Titles,_,
+		[[string('A familiar example'),string('Humans'),string('Children'),string('Pet')]],_
+		),
+	Children = [t(luis,[t(tartaruga,[])]),t(isabel,[t('artificial baby',[])])],
+	buildTermTreeModel(t('Familia ficticia',[t(gabriela,Children), t(miguel,Children)]),M),
+	javaMessage('com.declarativa.interprolog.gui.TermTreeWindow','TermTreeWindow'(M,Titles)).
+
+showObjectVariables :-
+	findall(Class,ipObjectSpec(Class,_,_,_),Classes),
+	buildClassTree(Classes,TreeList),
+	buildTermTreeModel(t('Dummy',TreeList),M),
+	ipObjectTemplate('ArrayOfString',Titles,_,
+		[[string('Object specifications available'),string('Object class'),string('Instance variables')]],_
+		),
+	javaMessage('com.declarativa.interprolog.gui.TermTreeWindow','TermTreeWindow'(M,Titles)).
+
+buildClassTree([],[]) :- !.
+buildClassTree([C|Classes],[t(C,Variables)|Trees]) :- 
+	ipObjectTemplate(C,_,Vars,_,_),
+	buildVarTrees(Vars,Variables),
+	buildClassTree(Classes,Trees).
+
+buildVarTrees([],[]) :- !.
+buildVarTrees([V|Vars],[t(V,[])|Variables]) :- buildVarTrees(Vars,Variables).
+
+
+%browseTreeTerm(t(root,[t(child1,[]),t(child2,[]),t(child3,[t(granchild31,[t(grandgrandchild311,[])])])])).
+
+browseTreeTerm(T) :- 
+	buildTermTreeModel(T,M), 
+	ipObjectTemplate('ArrayOfString',Titles,_,[[]],_),
+	javaMessage('com.declarativa.interprolog.gui.TermTreeWindow','TermTreeWindow'(M,Titles)).
+
+
+/**** Prolog engine inspection ****/
+
+% Visualize inspector window; argument is goal used to abort the ongoing computation
+showPrologEngineInspector(AbortGoal) :- % should avoid window duplication
+	buildMemorySpaceModel(Memory), /* buildTableUsageModel(Tables),*/ ipPrologEngine(E),
+	javaMessage('com.declarativa.interprolog.gui.EngineInspectionWindow',W,'EngineInspectionWindow'(Memory,E/*,Tables*/)),
+	assert(ipEngineInspectorWindow(W,AbortGoal)).
+
+:- dynamic ipEngineInspectorWindow/2.
+
+refreshPrologEngineInspector :- refreshPrologEngineInspector(_Goal) .
+
+% refreshes the inspector, given that the current query goal is G
+refreshPrologEngineInspector(G) :-
+	ipEngineInspectorWindow(W,AbortGoal), 
+	buildMemorySpaceModel(Memory), % buildTableUsageModel(Tables), 
+	buildTermModel(G,GM),
+	javaMessage(W,R,refresh(Memory,GM /*,Tables*/)),
+	ipObjectSpec('java.lang.Boolean',R,[Boolean],_),
+	(Boolean = 0 -> call(AbortGoal) ; Boolean = 1).
+
+buildMemorySpaceModel(Model) :-
+	buildTermModel('Memory space'('Facet','Allocated','Used'),TemplateModel),
+	findall(S,(S=xsbMemorySpace(_,_,_),S),Facets),
+	buildTermModels(Facets,FacetModels),
+	F=irrelevant,N=3, %  redundancy here, for temporary convenience to PredicateTableModel.java
+	ipObjectSpec('PredicateTableModel',Model,[N,F,TemplateModel,FacetModels],_).
+
+% xsbMemorySpace(Facet,Allocated,Used)
+xsbMemorySpace('Total memory',Allocated,Used) :- statistics(total_memory,[Allocated,Used]).
+xsbMemorySpace(gl,Allocated,Used) :- statistics(gl,[Allocated,Used]).
+xsbMemorySpace(tc,Allocated,Used) :- statistics(tc,[Allocated,Used]).
+xsbMemorySpace('Table space',Allocated,Used) :- statistics(tablespace,[Allocated,Used]).
+%xsbMemorySpace(shared_tablespace,Allocated,Used) :- statistics(shared_tablespace,[Allocated,Used]).
+xsbMemorySpace('Trie asserts',Allocated,Used) :- statistics(trieassert,[Allocated,Used]).
+xsbMemorySpace('Free heap',Free,'-') :- statistics(heap,Free).
+xsbMemorySpace('Free CP',Free,'-') :- statistics(choice_point,Free).
+xsbMemorySpace('Free Trail',Free,'-') :- statistics(trail,Free).
+xsbMemorySpace('Free Local',Free,'-') :- statistics(local,Free).
+xsbMemorySpace('Atoms',Free,'-') :- statistics(atoms,Free).
+
+
+callInspecting(G) :- ipEngineInspectorWindow(W,_), !, timed_call(G,[repeating(100,refreshPrologEngineInspector(W))]).
+callInspecting(G) :- showPrologEngineInspector(abort), callInspecting(G).
+

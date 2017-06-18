@@ -1,0 +1,281 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta http-equiv="Content-Language" content="en-us">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>InterProlog FAQ</title>
+<meta name="Microsoft Border" content="b">
+</head>
+
+<body>
+
+<table align=center border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td><a href="http://www.declarativa.com"><img src="images/logo.gif" alt="Declarativa" border="0" width="53" height="57"></a><font FACE="Swis721 LtEx BT,Trebuchet MS" size="7"> <b>Declarativa</b></font>
+    </td>
+  </tr>
+  <tr>
+    <td height="17"></td>
+  </tr>
+</table>
+
+<h2><a name="top">InterProlog Frequently Asked Questions</a></h2>
+<ol>
+  <li><a href="#trying Prolog"><b>How can I try/port my Prolog program ?</b></a></li>
+  <li><a href="#visualize"><b>How can I visualize Prolog structures ?</b></a></li>
+  <li><a href="#trying Prolog"><strong>How can I make a Java program that calls
+    Prolog ?</strong></a></li>
+  <li><a href="#returnList"><b>How can I return a list from Prolog to Java ?</b></a></li>
+  <li><a href="#null on startup"><b>Why do I get a nullPointerException on
+    startup ?</b></a></li>
+  <li><a href="#getRealObject"><b>How do I get a full object specification as a javaMessage
+result, instead of just an object reference ?</b></a></li>
+  <li><a href="#nonDeterministicGoal"><b>PrologEngine has only deterministicGoal
+    methods, how do
+you call goals with multiple solutions ?</b></a></li>
+  <li><a href="#passing objects"><b>How to pass a custom object structure from
+Prolog to/from Java ?</b></a></li>
+  <li><a href="#public methods"><b>Why do I get an IllegalAccessException when using javaMessage
+    ?</b></a></li>
+  <li><a href="#javaMessage returned object"><b>Why can't I obtain instance
+    variables in Prolog for an object
+returned by javaMessage ?</b></a></li>
+  <li><a href="#consultFromPackage"><b>Where should I put a Prolog file that my
+    Java app uses?</b></a></li>
+  <li><a href="#consultFromPackage"><b>Can I build Applets with InterProlog ?</b></a></li>
+  <li><a href="#recompile"><strong>How do I change and recompile InterProlog ?</strong></a></li>
+  <li><strong><a href="#whichProlog">How do I know from Java which Prolog is
+    being used by a PrologEngine</a>?</strong></li>
+  <li><a href="#support"><b>Is technical support and project guidance available?</b></a></li>
+</ol>
+<p>For comments/additions to this FAQ please email <a href="mailto:interprolog@declarativa.com">interprolog@declarativa.com</a></p>
+<hr>
+<h3><a name="trying Prolog">How can I try/port my Prolog program</a> ?</h3>
+<p>Just run one of the Prolog listener windows, either with
+runSubprocessListener.bat or runNativeListener.bat, consult your files and call
+your goals as you would in a shell console. Both invoke the same XSB Prolog
+installed in your machine.</p>
+<p>The first uses a <a href="htmldocs/com/declarativa/interprolog/SubprocessEngine.html">SubprocessEngine</a>,
+which redirects Prolog I/O to the listener window, so using it feels just like
+using Prolog's regular top level interpreter in a standard shell console, tracer
+and all, except that you get the ability to use javaMessage, such as for <a href="#visualize">visualization</a>.
+SubprocessEngine may be useful for development.</p>
+<p>The second uses a <a href="htmldocs/com/xsb/interprolog/NativeEngine.html">NativeEngine</a>
+invoked by deterministicGoal, so you only get the first solution to your goals;
+Prolog I/O is performed in the Java console, and Prolog's regular top level
+interpreter is not used. NativeEngine is what you want to use for Java
+applications.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="visualize">How can I visualize Prolog structures ?</a></h3>
+<p>Call from a Prolog listener window:</p>
+<ul>
+  <li>browseTerm(Term) to display a term as a tree</li>
+  <li>browseList(List) to display a list</li>
+  <li>browseLiteralInstances(GroundTerm,Instances) to display a table</li>
+  <li>browseTreeTerm(T) to display a tree in a hierarchical multi-list browser</li>
+</ul>
+<p>Take a look at their implementation in the com.declarativa.interprolog.gui
+package, and in the associated Prolog file visualize.P,&nbsp; and develop your own
+Swing models based on objects specified by Prolog.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="Java program">How can I make a Java program that calls Prolog</a> ?</h3>
+<p>To develop a Java application using InterProlog you must import the relevant
+class packages,
+typically com.declarativa.interprolog and com.xsb.interprolog, and include
+interprolog.jar in your CLASSPATH. The other packages are needed only if you use them :) Take a
+    look at com/declarativa/interprolog/gui/ListenerWindow.java for inspiration.</p>
+<p>Here's a simple &quot;hello world&quot; Java program that uses Prolog,
+already included in the InterProlog examples package:</p>
+<p><code>package com.declarativa.interprolog.examples;<br>
+import com.declarativa.interprolog.*;<br>
+import com.xsb.interprolog.*;<br>
+public class HelloWorld{<br>
+&nbsp; public static void main(String args[]) {<br>
+&nbsp; PrologEngine engine = new NativeEngine(args[0]);<br>
+&nbsp; engine.command("import append/3 from basics");<br>
+&nbsp; Object[] bindings = engine.deterministicGoal(<br>
+&nbsp;&nbsp;&nbsp; &quot;name(User,UL),append(\&quot;Hello,\&quot;, UL, ML), name(Message,ML)",<br>
+&nbsp;&nbsp;&nbsp; &quot;[string(User)]&quot;,<br>
+&nbsp;&nbsp;&nbsp; new Object[]{System.getProperty("user.name")},<br>
+&nbsp;&nbsp;&nbsp; &quot;[string(Message)]&quot;);<br>
+&nbsp; String message = (String)bindings[0];<br>
+&nbsp; System.out.println(&quot;\nMessage:&quot;+message);<br>
+&nbsp; // the above demonstrates object passing both ways;&nbsp;<br>
+&nbsp; // since we may simply concatenate strings, an alternative coding would be:<br>
+&nbsp; bindings = engine.deterministicGoal(<br>
+&nbsp;&nbsp;&nbsp; &quot;name('&quot;+System.getProperty(&quot;user.name&quot;)+&quot;',UL),append(\&quot;Hello,\&quot;, UL, ML), name(Message,ML)",<br>
+&nbsp;&nbsp;&nbsp; &quot;[string(Message)]&quot;);<br>
+&nbsp; // (notice the ' surrounding the user name, unnecessary in the first case)<br>
+&nbsp; System.out.println(&quot;Same:&quot;+bindings[0]);<br>
+&nbsp; System.exit(0);<br>
+&nbsp; }<br>
+}</code></p>
+<p>You can run it with java -classpath interprolog.jar com.declarativa.interprolog.examples.HelloWorld YOUR_XSB_DIR. The same program will run
+using a SubprocessEngine by changing the 6th line and passing as argument
+YOUR_XSB_EXECUTABLE_PATH instead.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="returnList">How can I return a list from Prolog to Java?</a></h3>
+<p>It depends on how variant your list elements can be. Prolog imposes nearly no
+constraints on terms, but Java needs more structure.</p>
+<p>The short answer to the question is: one can use the TermModel class, which
+is able to represent any Prolog term on the Java side, but putting the burden on
+Java to know about term structure. One can write something like:</p>
+<p><code>PrologEngine engine = ... ...&nbsp;<br>
+ Object[]
+bindings = engine.deterministicGoal(&quot;..., buildTermModel(List,TM)&quot;,&quot;[TM]&quot;);&nbsp;<br>
+ TermModel list =
+(TermModel)bindings[0];&nbsp;<br>
+ System.out.println(&quot;Here is the result:&quot;+list);&nbsp;<br>
+ if (list.isList()) {&nbsp;<br>
+&nbsp; // Visit the list using
+getChild(0) (for head) and getChild(1) (for tail)<br>
+&nbsp; ...<br>
+ }</code></p>
+<p>(buildTermModel is a predicate that constructs a TermModel object
+specification for any given Prolog term.)</p>
+<p>The longer answer involves &quot;typing&quot; the list elements. Suppose that
+the list contained just atoms, corresponding to String objects. One might write instead:</p>
+<p>On the Prolog side:&nbsp;<br>
+<code>processList([],[]).&nbsp;<br>
+processList([A|L],[string(A)|LL]) :- atom(A), processList(L,LL).&nbsp;<br>
+ % string(S) specifies a Java String object</code></p>
+<p>On the Java side:</p>
+<p><code>PrologEngine engine = ... ...&nbsp;<br>
+Object[]
+bindings = engine.deterministicGoal(<br>
+&nbsp; &quot;..., processList(List,LL), ipObjectTemplate('ArrayOfString',AS,_,[LL],_)&quot;,&quot;[AS]&quot;);&nbsp;<br>
+String[] list = (String[])bindings[0];&nbsp;<br>
+ System.out.println(&quot;Here is the list of Strings:&quot;);&nbsp;<br>
+ for (int i=0;i&lt;list.length;i++)&nbsp;<br>
+&nbsp; System.out.println(list[i]);&nbsp;</code></p>
+<p>For more complex list elements, e.g corresponding to instances of a. custom
+class, the class would need to be taught to the PrologEngine with <a href="htmldocs/com/declarativa/interprolog/PrologEngine.html#teachOneObject(java.lang.Object)">teachMoreObjects</a>,
+and a different ipObjectTemplate or ipObjectSpec goal would be used.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="null on startup">Why do I get a nullPointerException on startup?</a></h3>
+<p>Perhaps because InterProlog assumes that its own Prolog files are in a jar 
+file, and is unable to read them.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="getRealObject">How do I get a full object specification as a javaMessage
+result, instead of just an object reference ?</a></h3>
+<p>You need to use an extra javaMessage to obtain a full object specification;
+say your InvisibleObject is X and you want a specification for the referred
+object in S : ipPrologEngine(E), javaMessage(E,S,getRealJavaObject(X))</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="nonDeterministicGoal">PrologEngine has only deterministicGoal methods, how do
+you call goals with multiple solutions?</a></h3>
+<p>There's no &quot;nonDeterministicGoal&quot; in this version. But one can collect all solutions on the Prolog side at once and return them as a
+single list. For a simple implementation one might want to use a Java TermModel
+object to encapsulate the list. So on the Prolog side define:</p>
+<p><code>nonDeterministicGoal(InterestingVarsTerm,G,ListTM) :-<br>
+&nbsp; findall(InterestingVarsTerm,G,L), buildTermModel(L,ListTM).</code></p>
+<p>And on the Java side do something like (assuming you wanted to collect
+all solution bindings for mygoal(A,B)):</p>
+<p><code>String goal = &quot;nonDeterministicGoal(A+B,mygoal(A,B),ListModel)&quot;;&nbsp;<br>
+ //
+Notice that 'ListModel' is referred in both deterministicGoal arguments:&nbsp;<br>
+TermModel solutionVars = (TermModel)(engine.deterministicGoal(goal,&quot;[ListModel]&quot;)[0]);<br>
+System.out.println(&quot;Solution bindings list:&quot;+solutionVars);&nbsp;<br>
+...</code></p>
+<p>...and
+at this point one can use TermModel methods (or access its two public instance
+variables) to visit the list and gather bindings; at the atomic level this means
+collecting TermModel nodes, which will be either String or numeric type wrapper
+objects.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="passing objects">How to pass a custom object structure from
+Prolog to/from Java</a>?</h3>
+<p>Make the object class Serializable, teach it to the PrologEngine, use
+ipObjectSpec on the Prolog side, and use deterministicGoal Object[] arguments
+and/or return values. See BackEnd.java in com/declarativa/interprolog/examples</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="public methods">Why do I get an IllegalAccessException when using javaMessage</a>?</h3>
+<p>Make sure your class and the methods invoked by javaMessage are 'public'.
+Prolog-&gt;Java calls go through Java's Reflection mechanisms so all invoked
+classes/methods must be public, including constructors.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="javaMessage returned object">Why can't I obtain instance variables
+in Prolog for an object
+returned by javaMessage</a>?</h3>
+<p>When you create a Java object from the Prolog side, the message result on the
+Prolog side is always an InvisibleObject specifier, which encapsulates a compact
+reference to the Java object - just an integer, which is a key into an
+ObjectRegistry, an object kept by a PrologEngine. So the object variables are
+not returned to Prolog.</p>
+<p>But if you send the InvisibleObject back to Java as a javaMessage argument it
+will automatically be converted into the real object just prior to invoking the
+Java method. And so in both directions communication involves a few bytes,
+rather than perhaps a few K of the fully serialized objec; if you want this, see
+<a href="#getRealObject">here</a>&nbsp;</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="consultFromPackage">Where should I put a Prolog file that my Java app
+uses</a>?</h3>
+<p>Place it in the same directory and jar file as the Java package more closely
+related to the file, and load it into the PrologEngine with
+consultFromPackage(filename,MyClass.class)</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="build applets">Can I build Applets with InterProlog</a>?</h3>
+<p>Not in general. InterProlog needs access beyond the security permissions of
+typical Java applet viewers such as web browsers. In principle it should be
+possible to sign an applet to enlarge its permissions, but anyway the Prolog
+system must be installed in the machine running the applet, which probably makes
+it less appealing.&nbsp;</p>
+<p>However it is possible to write a simple Java server application running
+InterProlog and accepting connections from applets. Beware though that although
+PrologEngine handles deterministicGoals/javaMessages from multiple Java threads,
+their Prolog handling is sequential, so it is possible for a hanging goal (say,
+because it calls some Java method that blocks waiting for something that never
+comes) to hang others.</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="recompile">How do I change and recompile InterProlog ?</a></h3>
+To change/recompile InterProlog using Metrowerks Codewarrior for Java 5 or later 
+on Windows, use the interprolog.mcp project file. But you will need to compile the *.P files
+manually, cf. compile_Ps scrip
+<p>To change/recompile InterProlog using Sun's reference Java Development Kit, use
+the build script, or derive your own make script from there<p>To change/recompile InterProlog using another IDE, check the steps in
+build.bat; in addition to Java class files, the *compiled versions* (filenames ending in
+.xwam or .O depending on XSB Prolog being 2.6 or earlier resp.) of
+    interprolog.P and visualization.P (this only if you're using classes of
+pt.servisoft.interprolog.gui) must be up-to-date and placed in the jar, so that
+    later they can be extracted by PrologEngine.
+<p>InterProlog is open source, so if you're ready to share your additions within
+the same licensing model feel free to contribute them to <a href="mailto:interprolog@declarativa.com">interprolog@declarativa.com</a>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><strong><a name="whichProlog">How do I know from Java which Prolog system is being
+used by a PrologEngine?</a></strong></h3>
+<p>Just test the class of its peer:</p>
+<p>if (engine.getImplementationPeer() instanceof XSBPeer){<br>
+&nbsp; // XSB Prolog<br>
+}</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<h3><a name="support">Is technical support and project guidance available ?</a></h3>
+<p>Yes. Simple technical support and project guidance questions are usually
+answered within a couple of days, and bugs tend to get fixed although slower.
+Faster or deeper support and development aid is available through Declarativa
+consulting, please contact <a href="mailto:interprolog@declarativa.com">interprolog@declarativa.com</a>&nbsp;</p>
+<h5><a href="#top">Back to Top</a></h5>
+<hr>
+<address>
+Copyright © 2005 Declarativa. All rights reserved.<br>
+Revised: <!--webbot bot="TimeStamp" S-FORMAT="%B %d, %Y" S-TYPE="EDITED" startspan -->Outubro 21, 2005<!--webbot bot="TimeStamp" endspan i-CheckSum="30901" -->
+.</address>
+
+</body>
+
+</html>

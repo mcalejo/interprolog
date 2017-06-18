@@ -1,0 +1,341 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<title>Installation of InterProlog, a Java + Prolog interface</title>
+<meta name="Microsoft Border" content="b">
+</head>
+
+<body><!--msnavigation--><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><!--msnavigation--><td valign="top">
+
+<table align=center border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td><a href="http://www.declarativa.com"><img src="images/logo.gif" alt="Declarativa" border="0" width="53" height="57"></a><font FACE="Swis721 LtEx BT,Trebuchet MS" size="7"> <b>Declarativa</b></font>
+    </td>
+  </tr>
+  <tr>
+    <td height="17"></td>
+  </tr>
+</table>
+
+<h1 align="center"><a href="default.htm">Interprolog</a> version 2.1.2</h1>
+
+<p align="center">21 October 2005</p>
+
+<h2>Changes since last version</h2>
+
+<p>Please see <a href="#changes">below</a>.</p>
+
+<h2>How to download and install</h2>
+
+<p>InterProlog installation does not require a compilation, as it can be
+installed by copying a directory and editing one file; but the Prolog system(s)
+to use may need to be compiled, namely under Unix. InterProlog is compatible with Windows XP/2000, Mac OS X and Linux. It requires Java 1.4 and
+either XSB Prolog 2.7.x, SWI 5.4.x or YAP 5.x.&nbsp;</p>
+
+<p>Please follow the steps below for your system:</p>
+
+<table border="1" width="854">
+  <tr>
+    <td align="center" height="22" width="88">
+      <h3>Step</h3>
+    </td>
+    <td height="22" width="126">
+      <h3><b>Comments</b></h3>
+    </td>
+    <td height="22" width="315">
+      <h3><b>Windows 2000, XP</b></h3>
+    </td>
+    <td height="22" width="297">
+      <h3><b>Mandrake Linux 10.2, Mac OS X</b></h3>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" rowspan="4" height="250" width="88">
+      <h1>1</h1>
+      <p><a href="http://java.sun.com/"><img alt="Java Technology Home Page" src="images/v4_java_logo.gif" border="0" width="38" height="66"></a></p>
+    </td>
+    <td rowspan="4" height="250" width="126"><p>The Java Runtime Environment will be sufficient if you don't plan to
+      write any Java code AND you're using Windows. Otherwise&nbsp; you need the
+      <b> Java
+      Development Kit</b></td>
+    <td colspan="2" height="76" width="618">Download J2SE from java.sun.com site (preferably
+      version 1.4 or later), <a href="http://java.sun.com/j2se/1.4.2/download.html">http://java.sun.com/j2se/1.4.2/download.html</a>,
+      and install it some directory MY_JAVA_DIR in your disk
+    </td>
+  </tr>
+  <tr>
+    <td height="38" width="315">See if it works in a command shell window, by typing
+      MY_JAVA_DIR\bin\java
+      -version&nbsp;</td>
+    <td height="38" width="297">See if it works in a command shell window, by typing
+      MY_JAVA_DIR/bin/java
+      -version&nbsp;</td>
+  </tr>
+  <tr>
+    <td colspan="2" height="80" width="618">
+      <p> You should obtain something like this:</p>
+      <p><font size="1"><code>java version "1.4.2"<br>
+      Java(TM) 2 Runtime Environment, Standard Edition (build 1.4.2-b28)<br>
+      Java HotSpot(TM) Client VM (build 1.4.2-b28, mixed mode)</code></font></p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" height="38" width="618">Write down (or copy into the clipboard...) the path
+      MY_JAVA_DIR.....bin,
+      the <i> directory where the java executable is</i>. We'll use this below to define
+      the <b>JAVA_BIN</b> environment variable&nbsp;</td>
+  </tr>
+   <tr><td colspan=4 bgcolor="#FFFF00" height="19" width="844">&nbsp;</td></tr>
+  <tr>
+    <td align="center" rowspan="3" width="88">
+      <h1>2</h1>
+      <p><img class="scaled" alt="XSB Logo" src="images/xsb-logo.png" width="75" height="55"></p>
+      <p><img src="images/swipl.jpeg" useMap="#map" border="0" width="68" height="63"></p>
+      <p><b><font face="Courier New" color="#ff0000" size="7">YAP</font></b></p>
+    </td>
+    <td rowspan="3" width="126">
+      <p>You need to install either <b>XSB Prolog</b>  or/and <b>SWI Prolog</b>&nbsp;or/and
+      <b>YAP Prolog</b></td>
+    <td valign="top" colspan="2" width="618">To get and install <b>XSB</b>  <b> Prolog
+      2.7.1</b> with
+      built-in InterProlog support (interfacing through both sockets and JNI) follow <a href="INSTALL_XSB.htm">these
+      instructions</a>. XSB Prolog 2.6 is no longer supported, fall back to <a href="download211.htm">
+      InterProlog 2.1.1</a> if you must use it.<p>To get and install <b>SWI</b> Prolog (interfacing through sockets, no
+      JNI) just <a href="http://www.swi-prolog.org/dl-stable.html">install the
+      standard version</a> (5.4.6 or later); if you're building it yourself make
+      sure you make and install <code>clib</code>.<p>To get and install YAP Prolog (interfacing through sockets, no
+      JNI) just install the standard version (5.0 or later)</td>
+  </tr>
+  <tr>
+    <td colspan="2" width="618">
+      <p>Write down (or copy into the clipboard...) the <i>paths for the
+      directories containing the executable images of Prolog</i>. We'll use this below to define the <b>XSB_BIN_DIRECTORY, SWI_BIN_DIRECTORY</b> 
+      and <b>YAP_BIN_DIRECTORY</b> environment variables (or just one of them if
+      you only need one Prolog).&nbsp;</p>
+      <p> These will typically be something like</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="315">
+      <p>XSB_DIR...config.....bin</p>
+      <p>SWI_DIR...bin</p>
+      <p>\Program Files\Yap\bin</p>
+    </td>
+    <td width="297">
+      XSB_DIR...config.....bin
+      <p>/usr/lib/SWI_DIR/bin/i686-linux&nbsp;</p>
+      <p>For Yap, /usr/bin
+    </td>
+  </tr>
+  <tr><td colspan=4 bgcolor="#0000FF" width="844">&nbsp;</td></tr>
+  <tr>
+    <td align="center" rowspan="3" height="613" width="88">
+      <h1>3</h1>
+      <p><a href="/"><img alt="Declarativa" src="images/logo.gif" border="0" width="53" height="57"></a></p>
+    </td>
+    <td rowspan="3" height="613" width="126"><b>InterProlog</b> is installed by copying a file tree and
+      editing some environment variables in a text file</td>
+    <td colspan="2" height="38" width="618">Download the InterProlog zip file from
+      <a href="http://www.declarativa.com/interprolog/interprolog212.zip">here</a>,
+      which includes this page, and expand it into somewhere in your disk&nbsp;</td>
+  </tr>
+  <tr>
+    <td valign="top" width="315">
+      <p>Look into the windowsScripts directory. Edit windowsVariables.bat, changing the variables <b>JAVA_BIN,</b>
+ <b>XSB_BIN_DIRECTORY</b>  and/or <b>SWI_BIN_DIRECTORY</b>  and/or <b>YAP_BIN_DIRECTORY</b>
+      to the values you got in the install steps
+      above</p>
+      <p></p>
+    </td>
+    <td valign="top" width="297"><p>Look into the unixScripts directory. Edit
+      unixVariables.sh, changing the variables <b>JAVA_BIN,</b>
+ <b>XSB_BIN_DIRECTORY</b>  and/or <b>SWI_BIN_DIRECTORY</b>  and/or <b>YAP_BIN_DIRECTORY</b>
+      to the values you got in the install steps
+      above</p>
+      <p><i>Mac OS X note: uses some different system directory arrangements take a look at
+      MacOSXVariables.sh for inspiration</i></p>
+      <p>Make sure the script files are executable:<code><br>
+      chmod a+x *.sh</code></p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" height="430" width="618">
+      <p>That's it :-)&nbsp;</p>
+      <p>See if it works by running a run....listener.bat scripts (./run...listener.sh in Unix). A Java window with a Prolog listener should
+      appear, looking perhaps like this:</p>
+      <p align="center"><img border="0" src="images/INSTAL5.gif" width="400" height="238"></p>
+      <p align="left">Alternatively, if you're using XSB Prolog you can try the
+      Sudoku puzzle editor/solver (change directory separators to / under Unix)</p>
+      <blockquote>
+        <p align="left"><font size="1">%JAVA_BIN%\java&nbsp; -DXSB_BIN_DIRECTORY=%XSB_BIN_DIRECTORY%&nbsp;
+        -classpath ..\interprolog.jar
+        com.declarativa.interprolog.examples.SudokuWindow</font></p>
+      </blockquote>
+      <p align="center"><img border="0" src="images/NEWINS1.gif" width="184" height="205">
+      <img border="0" src="images/NEWINS2.gif" width="184" height="205"></p>
+      <p>See the sources in com/declarativa/interprolog/examples for more
+      information; subdirectory SudokuPuzzles contains... puzzles, in a simple
+      Prolog format.</p>
+      <p><i>If you installed <b> ALL</b> Prologs</i> supported by InterProlog (currently
+      XSB, SWI and YAP), <i>you can optionally run the standard test suite</i>, using
+      the script <code>testit</code>; when finished successfully (after about a
+      couple of minutes in a 400MHz Pentium) the following window will appear:</p>
+      <p align="center">
+      <img border="0" src="images/NEWdow2.gif" width="300" height="297"></p>
+      <p><i>If things don't go well</i>: first make sure the steps above were done
+      properly; then open a command shell window, cd to the interprolog212
+      directly, run the failing script with -debug afterwards, and email the console log&nbsp;to
+      <a href="mailto:interprolog@declarativa.com">interprolog@declarativa.com</a><p>For
+      example, to make runSWISPlistener.bat report debugging information edit
+      the command line to
+      <blockquote>
+        <p><code>%JAVA_BIN%\java -classpath %CLASSPATH%;..\interprolog.jar com.declarativa.interprolog.gui.SWISubprocessEngineWindow
+        <b>-debug</b></code>
+      </blockquote>
+    </td>
+  </tr>
+  <tr><td colspan=4 bgcolor="#FF8000" height="19" width="844">&nbsp;</td></tr>
+   <tr>
+    <td align="center" height="228" width="88">
+      <h1>4</h1>
+      <h2>Using it</h2>
+    </td>
+    <td height="228" colspan="3" width="750">For Prolog development, use
+      runXXXSPListener, which acts as a
+      simple graphical front-end to the full Prolog system through a
+      SubprocessEngine (using sockets), allowing you to get
+      multiple solutions, Prolog textual I/O etc.&nbsp;runNativeListener uses
+      the JNI interface (currently available only for XSB Prolog), which lacks
+      the traditional top level<p>Try some Prolog goals, such as <code>browseTerm(vp(np(interprolog),verb(working))),
+    </code>which should display a tree. You may drag your Prolog source files into the listener
+      window for consulting, or use the menu &quot;File/Consult&quot; . Edit the files with you favorite editor.
+      <p>Some documentation:</p>
+      <ul>
+        <li><b>Java</b>: <a href="http://java.sun.com/docs/books/tutorial/index.html">Tutorial</a>,
+      <a href="http://java.sun.com/j2se/1.4.2/docs/index.html">Reference</a>
+      (your JDK installation may include this)</li>
+        <li><b>Prolog</b>:&nbsp;
+          <ul>
+            <li> <a href="http://xsb.sourceforge.net/manual1/node1.html">XSB
+      Manual 1</a> and <a href="http://xsb.sourceforge.net/manual2/node1.html">XSB
+      Manual 2</a> (your XSB installation will typically include a Postscript
+      version)</li>
+            <li><a href="http://www.swi.psy.uva.nl/projects/SWI-Prolog/Manual/Contents.html">SWI
+              Manual</a></li>
+            <li><a href="http://www.ncc.up.pt/~vsc/Yap/yap.html" target="_blank">YAP
+              Manual</a></li>
+          </ul>
+        </li>
+        <li><b>InterProlog</b>:&nbsp;introductory <a href="PaperEPIA01.doc">paper</a>,
+          Java-side <a href="htmldocs/overview-summary.html">API</a>,
+          Prolog-side <a href="prologAPI.htm">predicates</a>, <a href="faq.htm">FAQ</a>.
+          See also the CHANGES.txt file, and comments in sources.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<p>Please let us know what you're using it for: <a
+href="mailto:interprolog@declarativa.com">interprolog@declarativa.com</a>. Enjoy!</p>
+
+<p>Miguel Calejo<br>
+Declarativa</p>
+
+<h2><a name="changes"></a>Improvements over version 2.1.1</h2>
+
+<ul>
+  <li>Support for YAP Prolog</li>
+  <li>Additional program example: a graphical Sudoku puzzle editor and solver</li>
+  <li>PrologEngine is now an interface, for the sake of flexibility; most of the old PrologEngine functionality moved into the new AbstractPrologEngine class,
+    courtesy of Chris Rued at XSB Inc</li>
+  <li>Several bug fixes, mostly courtesy of Tanya Vidrevich and Chris Rued at XSB Inc.</li>
+  <li> Additional control creating (XSB) NativeEngines, by specifying Prolog startup arguments in the constructor</li>
+  <li> New method PrologEngine.getPrologNumericVersion, useful for scenarios depending on the functionality of specific Prolog versions</li>
+  <li> InterProlog threads now properly killed on PrologEngine.shutdown()</li>
+  <li> Minor changes to the console listener scripts, extra test cases</li>
+</ul>
+
+<h2>Improvements over version 2.03</h2>
+
+<ul>
+  <li>Multiple PROLOG support: XSB Prolog and&nbsp; SWI Prolog
+    <ul>
+      <li><code>SubprocessEngine</code> is now an abstract class, to accomodate the support of multiple Prolog implementations. The "old" SubprocessEngine is now
+        <code> XSBSubprocessEngine</code></li>
+      <li>The interprolog.P is gone from com/declarativa/interprolog; each Prolog implementation has its specific file in this directory, typically in a subdirectory, currently
+        xsb/interprolog.P and swi/interprolog.pl; most of the specific Prolog dependencies are in these files and in PrologImplementationPeer subclasses</li>
+      <li>New method <code> toString(PrologEngine engine)</code> in class TermModel, uses the standard startup (not necessarily current) operator definitions for the engine, rather than the common (engine) subset.</li>
+    </ul>
+  </li>
+  <li>Functional and other improvements
+    <ul>
+      <li><code>PrologEngine.consultAbsolute(File)</code>: consults a Prolog file from an absolute path<br>
+ Another variant of the deterministicGoal method: TermModel deterministicGoal(TermModel G), useful for inter-Prolog goal calling. For example, the following goal (running in any supported Prolog, say
+        XSB) instantiates a SWI engine and obtains a goal solution for goal G:<br>
+        javaMessage('com.declarativa.interprolog.SWISubprocessEngine',SWI,'SWISubprocessEngine'),
+        buildTermModel(G,GM), javaMessage(SWI,SM,deterministicGoal(GM)),
+        recoverTermModel(SM,Solution), javaMessage(SWI,shutdown).</li>
+      <li> More robust PrologEngine.interrupt() handling, by using Prolog throw/catch</li>
+      <li> Improved InterProlog debugging information for SubprocessEngines created with the debug
+        argument true: they now print to System.err ALL Prolog output during startup</li>
+    </ul>
+  </li>
+  <li>Runtime environment configuration
+    <ul>
+      <li>Zero-argument Prolog engine constructors, for easier use in some contexts. For a PrologEngine to be instantiated without a constructor argument, a property must be defined in either file
+        <code> interprolog.defs</code> (a Properties file in the format described in
+        <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html">http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html</a>
+        , in the directory where the jar file containing the InterProlog classes is) or in the global properties (by using the -D java switch). The properties should include XSB_BIN_DIRECTORY and/or
+        SWI_BIN_DIRECTORY, depending on which Prolog(s) you're using</li>
+      <li><code>NativeEngine</code> now requires as argument (either explicitly or implicitly through the above Properties mechanism) the path to the XSB binary directory as the constructor argument, rather than the base directory as before, to simplify configuration; notice that this has more information than the base directory, eg for XSB it embbeds the consequence of being in a certain operating system.</li>
+      <li>Extra optional constructor argument in <code> PrologEngine</code> and subclasses,
+        loadFromJar. InterProlog startup files can now be loaded either from the jar file (as before) or from
+        classname-relative locations in the file system: interprolog.P from
+        ...com/declarativa/interprolog/{xsb or swi} and visualization.P from
+        ...com/declarativa/interprolog/gui/ . Loading from the file system can be useful while fiddling with InterProlog itself and testing changes to these files. There's a simple command line argument
+        (&quot;-nojar&quot;) that can be used in listener invocation scripts, see
+        ListenerWindow.commonMain().</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>Known limitations: </h3>
+
+<p> Use at your own risk; bug reports welcome except for the following. 
+
+<ul>
+  <li>Object grammar does not support conversion of Java doubles and longs to
+    Prolog numbers, but it recognizes and
+    generates them</li>
+  <li>See comments in streamcontents/4 in com/declarativa/interprolog/interprolog.P for some limitations
+    on serialization of complex (e.g. AWT) objects</li>
+  <li>Changing the Prolog top level prompt handler would break communication with
+    Java</li>
+  <li>The javaMessage predicate performs no coercion of basic type arguments
+    (e.g., if a formal parameter is <code>long</code> then an actual parameter
+    with <code>int</code> is not acceptable), only of object
+    types (e.g. the actual parameter can be a subclass of the formal parameter).</li>
+  <li>YAPSubprocessEngine does not support interrupt() under Windows</li>
+  <li>NativeEngine (XSB) not working on Windows 2000</li>
+  <li>Cannot use floats on XSB Prolog on Mandrake Linux 10.2, cf. reported <a href="http://sourceforge.net/tracker/?func=detail&amp;atid=101176&amp;aid=1285364&amp;group_id=1176">bug</a>&nbsp;
+    (but they wok fine on Mac OS X)</li>
+</ul>
+
+<cite>The information and InterProlog software referred in this page are ©
+Declarativa/XSB Inc. and are
+provided to you under the terms of the <a href="http://www.gnu.org/copyleft/lgpl.html">GNU
+Library License</a>, no warranties, authorship reference mandatory etc. Other
+items are © their legitimate owners. For further or
+more actual&nbsp; information please contact interprolog@declarativa.com</cite> <!--msnavigation--></td></tr><!--msnavigation--></table><!--msnavigation--><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+
+<hr color="#FF8000" noshade size="1">
+
+<p align="center"><small>&nbsp;Declarativa - Serviços de Informática, Lda.<br>
+R. Cerca 88, 4150-200 Porto, Portugal<br>
+&nbsp; <a href="http://www.declarativa.com">http://www.declarativa.com</a></small><br>
+<small>email: <a href="mailto:info@declarativa.com">info@declarativa.com</a>&nbsp; fax:
++351-22-610 9574&nbsp; tel: +351-22-610 9516</small></p>
+
+</td></tr><!--msnavigation--></table></body>
+</html>

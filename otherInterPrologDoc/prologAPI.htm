@@ -1,0 +1,125 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="pt">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>InterProlog Prolog-side API</title>
+<meta name="Microsoft Border" content="b">
+</head>
+
+<body>
+<table align="center" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td><a href="http://www.declarativa.com"><img src="http://www.declarativa.com/InterProlog/images/logo.gif" alt="Declarativa" border="0" width="53" height="57"></a><font FACE="Swis721 LtEx BT,Trebuchet MS" size="7">
+      <b>Declarativa</b></font></td>
+  </tr>
+  <tr>
+    <td height="17"></td>
+  </tr>
+</table>
+
+<h2>InterProlog - Prolog side API</h2>
+<p>The following predicates are available from Prolog; they're grouped into 3
+categories:</p>
+<ul>
+  <li><a href="#Invoking Java methods from Prolog">Invoking Java methods from
+    Prolog</a></li>
+  <li><a href="#Object/term conversion">Object/term conversion</a></li>
+  <li><a href="#Visualization of Prolog data">Visualization of Prolog data</a></li>
+</ul>
+<h2><a name="Invoking Java methods from Prolog">Invoking Java methods from
+Prolog</a></h2>
+<h3>ipPrologEngine(E)</h3>
+<p>A reference to the PrologEngine object that launched this Prolog
+process.&nbsp;</p>
+<h3>javaMessage( Target,Result,Exception,MessageName,ArgList,NewArgList )&nbsp;</h3>
+<p>Synchronously sends a message to Java object Target, waiting for its Result,
+catching any Exception that may occur. There are sugared versions below. In any
+case, arguments in ArgList must be of the proper Java-compatible types, in the
+form of object specifications. NewArgList contains the same objects in ArgList
+after the message is processed, possibly reflecting state changes.</p>
+<p>The messages
+available are those documented as public constructors and methods on the Java 
+classes being used.</p>
+<h3>javaMessage(Target,Result,Message)&nbsp;</h3>
+<p>Same as javaMessage/6, but accepts the Message in methodName(arguments)
+format, neglects the new state of the arguments, and treats some Target cases,
+avoiding the need for common object specifications (accepting simpler forms):
+object reference (integer), class object (atom), and class variable
+(class-variable term)&nbsp;</p>
+<h3>javaMessage(Target,Message)</h3>
+<p>Same as javaMessage(Target,_,Message)</p>
+<h2><a name="Object/term conversion">Object/term conversion</a></h2>
+<h3>buildTermModel( Term,TermModel ) / recoverTermModel( TermModel,Term )&nbsp;</h3>
+<p>Builds/recovers an object specification for a tree of TermModel instances,
+representing a Prolog Term; used by browseTerm or any code that needs to pass a
+full Prolog term to Java. Prolog variables are mapped into numbered instances of
+a dedicated Java class, VariableNode.&nbsp;</p>
+<h3>&nbsp;ipObjectSpec(ClassName,VarsValues,Object)</h3>
+<p>If Object is a variable, bind it to an object specification similar to the
+prototype/example given for the class except for the differences in VarValues;
+otherwise VarsValue will be bound to the differences between Object and
+prototype.If the class is an array, VarValues will be a list simply with the
+array values. Otherwise VarValueList is a list [VarName1=Value1, ..., VarNameN=ValueN].
+Each VarName must be an atom, the name of a Java instance variable of the
+classEach Value must be compatible with the corresponding object field; this is
+only partially checked, as not all information is available on the Prolog side.</p>
+<p>This predicate depends on ipObjectTemplate below.</p>
+<h3>ipObjectSpec( Name,G,Vars, examples-[SubstA,SubstB]/ANames)&nbsp;</h3>
+<p>One such fact is made available for each ObjectPairExample(Name,A,B) instance
+that the Java programmer sent to Prolog, either on startup or later through
+teachMoreObjects(); Name is the name of the class as given by the Java
+programmer; objects A and B are compared, producing a generalizing object
+(specification) G plus variable list Vars, that if bound to either SubstA or
+SubstB would become A or B resp. For the meaning of ANames see
+ipObjectTemplate&nbsp;</p>
+<h3>ipObjectTemplate(Name,Template,ANames,TVars,TSubs)&nbsp;</h3>
+<p>One such fact is made available for each ObjectPairExample(Name,A,B) instance
+that the Java programmer sent to Prolog, either on startup or through
+teachMoreObjects(); object A is analysed, and all variables in its class
+description are replaced by logic variables, collected in TVars, with values
+collected in TSubs; the resulting object specification is Template; binding
+TVars to TSubs would make Template = A; the variable types(names) are collected
+in ANames.</p>
+<h3>More about object specification&nbsp;</h3>
+<p>Strings and null objects have trivial specifications: <b>string(Atom) </b>and<b>
+'null', </b>resp<b>. </b>Other cases require the use of either&nbsp; ipObjectSpec
+or ipObjectTemplate:</p>
+<h4>ipObjectSpec('InvisibleObject',X,[ID],_)</h4>
+<p>Object X should be the object already existing and registered as (int) ID on
+the Java side&nbsp;</p>
+<h4>ipObjectSpec('IPClassObject',X,[C],_)</h4>
+<p>&nbsp;X is the class object for class with name C&nbsp;</p>
+<h4>ipObjectSpec('IPClassVariable',X,[C,V],_)</h4>
+<p>&nbsp;X is the class variable V of class C&nbsp;</p>
+<h4>ipObjectSpec(boolean,X,[B],_)</h4>
+<p>&nbsp;X is a boolean basic type for B (which should be 1 or 0); similar
+ipObjectSpec facts are available for the remaining basic types: byte, small, int,
+long, float, double, char&nbsp;</p>
+<h4>&nbsp;ipObjectSpec(C,X,Variables,_)</h4>
+<p>(Generic case) New object X of class C; C must be the fully qualified class
+name.</p>
+<h2><a name="Visualization of Prolog data">Visualization of Prolog data</a></h2>
+<h3>browseTerm(Term)&nbsp;</h3>
+<p>Creates a window with an outline (JTree) browser for Term.&nbsp;</p>
+<h3>browseList(List)&nbsp;</h3>
+<p>Creates a window with a JList browser on List. Double-clicking on items
+creates a term browser window.&nbsp;</p>
+<h3>browseTreeTerm(Tree)&nbsp;</h3>
+<p>Creates a window with a multi-pane hierarchical browser for Tree; this is
+assumed to be represented by some (dummy) functor with arity 2 or larger; the
+first argument is considered the node, the second a children list. The tree must
+have depth 2 or larger.</p>
+<h3>browseLiteralInstances(GroundTerm,Instances)&nbsp;</h3>
+<p>Creates a window with a JTable showing a set of term instances; the 
+GroundTerm is used to title the table columns.</p>
+
+<font face="Times">
+<cite>
+
+<p align="left">Comments to: <a href="mailto:interprolog@declarativa.com">interprolog@declarativa.com<br>
+</a>October 21, 2005</cite></font> </body>
+
+</html>

@@ -1,0 +1,1 @@
+Please see http://junit.sourceforge.net/README.html for licensing info regarding Junit. JUnit is necessary ONLY of you include in your build the test subtree.

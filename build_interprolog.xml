@@ -1,0 +1,83 @@
+<!--
+Copyright Miguel Calejo, InterProlog Consulting / Renting Point, Portugal 1998-2017
+
+First, please find your PATH_TO_YOUR_XSB_BIN_DIR, a XSB subdirectory containing its executable, e.g. under XSB_HOME/bin or XSB_HOME/config/.../bin . 
+Then:
+
+	ant -buildfile build_interprolog.xml -DXSB_BIN_DIRECTORY=PATH_TO_YOUR_XSB_BIN_DIR
+
+To try it:
+java -jar interprolog.jar PATH_TO_YOUR_XSB_BIN_DIR
+
+You should get a Prolog listener window. Type Prolog below, see output above. More info at http://interprolog.com/
+-->
+<project default="interprologJar">
+  <!-- Indicate XSB's config/..../bin directory position here: -->
+  <!--<property name="XSB_BIN_DIRECTORY" location=PATH_TO_YOUR_XSB_BIN_DIR /> -->
+  <property name="bin.dir" location="/Users/mc/tempCompiled" />
+  <property name="source.dir" location="src" />
+  <property name="testsource.dir" location="test" />
+  <property name="testresults.dir" value="testresults"/>
+  <property name="externalJars" value="externalJars"/>
+  <property name="mybase.dir" location="src/.." />
+  <delete quiet="true" dir="${bin.dir}"/>
+  <mkdir dir="${bin.dir}" />
+
+
+	<target name="interprologJar" depends="compileI">
+     <exec executable="svnversion" outputproperty="fidji.build">
+  	 <arg value="."/>
+  	 <arg value="-n"/>
+  	 </exec> 
+     <jar destfile="interprolog.jar" basedir="${bin.dir}" compress="true">
+     	<manifest>
+      	<attribute name="Main-Class" value="com.declarativa.interprolog.gui.XSBSubprocessEngineWindow" />
+    	<attribute name="Implementation-Version" value="${fidji.build}"/>
+     	</manifest>
+     </jar>
+     <delete quiet="true" dir="${bin.dir}"/>
+	</target>
+
+	<target name="compileI">
+    	<exec dir="${mybase.dir}" executable="${XSB_BIN_DIRECTORY}/xsb" 
+    		inputstring="catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('src/com/declarativa/interprolog/xsb/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('src/com/declarativa/interprolog/gui/visualization.P'), compile('src/com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt." failonerror="true"/>
+		<property environment="environment"/>
+		<javac destdir="${bin.dir}" debug="on" includeantruntime="false" nowarn="on">
+		  <src path="${source.dir}/com/declarativa/interprolog" />
+		  <src path="${source.dir}/com/xsb/interprolog" />
+		  <src path="${testsource.dir}" />
+		  <include name="**/*.java" />
+		  <classpath path="${testsource.dir}" />
+		  <classpath path="${source.dir}" />
+		  <classpath path="${externalJars}/junit-4.5.jar" />
+		  <compilerarg value="-Xlint:unchecked" />
+		</javac>
+		<copy todir="${bin.dir}/com/declarativa/interprolog">
+			<fileset dir="${source.dir}/com/declarativa/interprolog" includes="*.xwam"/>
+		</copy>
+		<copy file="${source.dir}/com/declarativa/interprolog/tests.P" toDir="${bin.dir}/com/declarativa/interprolog"/>
+		<copy todir="${bin.dir}/com/declarativa/interprolog/xsb">
+			<fileset dir="${source.dir}/com/declarativa/interprolog/xsb" includes="*.xwam"/>
+		</copy>
+		<copy todir="${bin.dir}/com/declarativa/interprolog/gui">
+			<fileset dir="${source.dir}/com/declarativa/interprolog/gui" includes="*.xwam"/>
+		</copy>
+		<copy todir="${bin.dir}/com/declarativa/interprolog/examples">
+			<fileset dir="${source.dir}/com/declarativa/interprolog/examples" includes="*.xwam"/>
+		</copy>
+	</target>
+    
+<target name="ipjavadoc"> <!-- InterProlog bridge -->
+<javadoc access="public" destdir="ipjavadoc" author="true" version="true" use="true" windowtitle="InterProlog Java Bridge"
+	link = "http://docs.oracle.com/javase/6/docs/api/">      
+ <fileset dir="src/com/declarativa/interprolog" defaultexcludes="yes">            
+    <include name="**/*.java"/>                  
+ </fileset>    
+ <fileset dir="src/com/xsb/interprolog" defaultexcludes="yes">            
+    <include name="**/*.java"/>                  
+ </fileset>    
+</javadoc>
+</target>
+
+
+</project>
