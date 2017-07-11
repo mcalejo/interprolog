@@ -41,7 +41,7 @@ public class LPSEngine extends XSBSubprocessEngine {
 	}
 
 	/** Load, execute a LPS file
-	 * @param f .lpsw or .lpsp file; other file extensions are assumed to denote .lpsw (Wei syntax) files
+	 * @param f .lpsw or .lps file; .pl is taken as a .lps file; other file extensions are assumed to denote .lpsw (internal syntax) files
 	 * @param fluents templates of fluent instances to inspect/receive at each cycle; must be a well-formed Prolog list, e.g. "[myfluent(1,_)]"
 	 * @param actions ditto for (basic) actions
 	 * @param moreOptions Prolog list with additional options for the LPS go(...) predicate
@@ -54,8 +54,8 @@ public class LPSEngine extends XSBSubprocessEngine {
 			evenMoreOptions="[]";
 		String FF = new File(f).getAbsolutePath();
 		boolean R;
-		if (f.toLowerCase().endsWith(".lpsp"))
-			R = deterministicGoal("basics:append("+options+","+moreOptions+",AllOptions),basics:append(AllOptions,"+evenMoreOptions+",AllOptions_),psyntax:gol(FF,AllOptions_)", "[string(FF)]", new Object[]{FF});
+		if (f.toLowerCase().endsWith(".lps") || f.toLowerCase().endsWith(".pl"))
+			R = deterministicGoal("basics:append("+options+","+moreOptions+",AllOptions),basics:append(AllOptions,"+evenMoreOptions+",AllOptions_),psyntax:golps(FF,AllOptions_)", "[string(FF)]", new Object[]{FF});
 		else 
 			R = deterministicGoal("basics:append("+options+","+moreOptions+",AllOptions),basics:append(AllOptions,"+evenMoreOptions+",AllOptions_),interpreter:go(FF,AllOptions_)", "[string(FF)]", new Object[]{FF});
 		return R;
@@ -80,7 +80,7 @@ public class LPSEngine extends XSBSubprocessEngine {
 	/** Execute the dining philosophers example */
 	public static void main(String[] args) {
 		LPSEngine E = new LPSEngine("/Users/mc/subversion/XSB/bin/xsb","/Users/mc/git/lps_corner");
-		E.printPrologOutputToConsole(); // for debugging convenience only
+		//E.printPrologOutputToConsole(); // for debugging convenience only
 		E.setCycleHandler(new CycleHandler(){
 			@Override
 			public String handleCycle(int T, TermModel[] fluents, TermModel[] actions) {
@@ -94,9 +94,10 @@ public class LPSEngine extends XSBSubprocessEngine {
 			}
 		});
 		// load and run dining philosophers
-		boolean R = E.go("/Users/mc/git/lps_corner/examples/dining_philosophers.lpsw", "[available(_)]", "[eat(_)]");
+		boolean R = E.go("/Users/mc/git/lps_corner/examples/CLOUT_workshop/diningPhilosophers.pl", "[available(_)]", "[pickup(_,_),putdown(_,_)]");
 		System.out.println("End result:"+ R );
 		E.shutdown();
+		System.exit(0);
 	}
 
 }

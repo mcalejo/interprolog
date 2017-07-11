@@ -484,7 +484,7 @@ public abstract class SubprocessEngine extends AbstractPrologEngine{
         if (shouldFire){
             doHalt();
             if (serverIsWindows()&&slowWindowsShutdown)
-                try{Thread.sleep(100);} // seems useless after all...
+                try{Thread.sleep(500);} // seems useless after all...
                 catch(InterruptedException ie){}
         }
         try{
