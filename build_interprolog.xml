@@ -72,8 +72,14 @@ More info at http://interprolog.com/
 		<copy todir="${bin.dir}/com/declarativa/interprolog/gui">
 			<fileset dir="${source.dir}/com/declarativa/interprolog/gui" includes="*.xwam"/>
 		</copy>
+		<copy todir="${bin.dir}/com/declarativa/interprolog/gui">
+			<fileset dir="${source.dir}/com/declarativa/interprolog/gui" includes="*.P"/>
+		</copy>
 		<copy todir="${bin.dir}/com/declarativa/interprolog/examples">
 			<fileset dir="${source.dir}/com/declarativa/interprolog/examples" includes="*.xwam"/>
+		</copy>
+		<copy todir="${bin.dir}/com/declarativa/interprolog/examples">
+			<fileset dir="${source.dir}/com/declarativa/interprolog/examples" includes="*.P"/>
 		</copy>
 	</target>
     
