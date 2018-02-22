@@ -1,5 +1,11 @@
-:- import random/1 from random.
-:- import length/2 from basics.
+:- if(current_prolog_flag(dialect, xsb)).
+:- use_module(random, [random/1]).
+:- use_module(basics,[ length/2]).
+:- endif.
+:- if(current_prolog_flag(dialect, swi)).
+:- use_module(library(tabling)). % not quite working below; just to avoid syntax error
+walltime(T) :- T is cputime. % approximation
+:- endif.
 
 /* Test predicates used by PrologEngineTest.java */
 fac(0,0).
@@ -14,10 +20,9 @@ fac(N,X) :-
 :- dynamic ipFactorial/1.
 
 callFac(Arg,Result) :-
-	ipFactorial(_ObjectJava), 
-	%ipPrologEngine(_ObjectJava),
+	ipFactorial(ObjectJava), 
 	ipObjectSpec(int,IntSpec,[Arg],_),
-	javaMessage(_ObjectJava,ResultSpec,factorial(IntSpec)),
+	javaMessage(ObjectJava,ResultSpec,factorial(IntSpec)),
 	ipObjectSpec('java.lang.Integer',ResultSpec,[Result],_).
 	
 	
@@ -36,9 +41,9 @@ fib(N,X) :-
 :- dynamic ipFibonaci/1.
         
 callFib(Arg,Result) :-
-	ipFibonaci(_ObjectJava),
+	ipFibonaci(ObjectJava),
 	ipObjectSpec(int,IntSpec,[Arg],_),
-	javaMessage(_ObjectJava,ResultSpec,fibonaci(IntSpec)),
+	javaMessage(ObjectJava,ResultSpec,fibonaci(IntSpec)),
 	ipObjectSpec('java.lang.Integer',ResultSpec,[Result],_).
 	
 somaN(0,0).
@@ -52,16 +57,16 @@ somaN(N,X) :-
 :- dynamic ipSomaN/1.
 
 callSomaN(Arg,Result) :-
-   ipSomaN(_ObjectJava), 
+   ipSomaN(ObjectJava), 
    ipObjectSpec(int,IntSpec,[Arg],_),
-   javaMessage(_ObjectJava,ResultSpec,somaN(IntSpec)),
+   javaMessage(ObjectJava,ResultSpec,somaN(IntSpec)),
    ipObjectSpec('java.lang.Integer',ResultSpec,[Result],_).
 
 buildIntList(0,[]) :-!.
 buildIntList(N,[N|L]) :- NN is N-1, buildIntList(NN,L).
 
 buildTermList(0,[]) :- !.
-buildTermList(N,[someFunctor-Aterm|L]) :- 
+buildTermList(N,[minus(someFunctor,Aterm)|L]) :- % do not use operator '-', InitiallyFlatTermModel limited in SWI
 	F is N/1.5, name(N,NumberL), name(S,[110|NumberL]), 
 	name(AnotherF,[102|NumberL]), Aterm =..[AnotherF,N,F,S],
 	NN is N-1, buildTermList(NN,L).
@@ -97,7 +102,7 @@ fastatomchars2utf2([C|More],N) :- % this clause actually not used in performance
 	fastatomchars2utf2(More,NN), N is NN+2.
 
 :- table win/1. % ?-win(X) will originate undefined solutions
-win(X) :- move(X, Y), tnot win(Y) .
+win(X) :- move(X, Y), tnot(win(Y)) .
 move((1), (2)) .
 move((2), (3)) .
 move((3), (4)) .

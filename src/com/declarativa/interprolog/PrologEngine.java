@@ -17,10 +17,13 @@ import java.io.File;
 public interface PrologEngine{
     
     /** InterProlog version */
-    public final static String version = "2.5.x";
+    public final static String version = "3.0.0";
 
     /** Returns the Prolog system version for this engine */
     public String getPrologVersion();
+    
+    /** Returns the git log hash */
+    public String getGitHash();
     
     // Ideally these should be static methods in the peer or implementation of
     // PrologEngine:s

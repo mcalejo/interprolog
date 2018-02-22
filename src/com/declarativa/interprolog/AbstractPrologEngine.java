@@ -19,6 +19,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
+import java.util.jar.JarFile;
 
 import com.declarativa.interprolog.util.BasicTypeWrapper;
 import com.declarativa.interprolog.util.GoalFromJava;
@@ -246,6 +248,19 @@ public abstract class AbstractPrologEngine implements PrologEngine{
 	It is requested to Prolog dynamically, but only once. Should not be used only after the engine objects is initialized (constructed). */
 	public String getPrologNumericVersion(){
 		return peer.getPrologNumericVersion();
+	}
+	/** Returns git log hash kept in our jar's manifest */
+	public String getGitHash() {
+		File classesFile;
+		try {
+			classesFile = new File(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+			return new JarFile(classesFile).getManifest().getMainAttributes().getValue("Implementation-Version");
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return "???";
 	}
 	
 	/** Returns the installation directory for the Prolog system, without the trailing separator char */
@@ -1265,10 +1280,10 @@ public abstract class AbstractPrologEngine implements PrologEngine{
 		while(!shutingDown){
 			// let some work proceed elsewhere; this seems light enough for now, if not use wait/notify around here too:
 			if (isIdle())
-				try { Thread.sleep(0,100); }
+				try { Thread.sleep(50,100); }
 				catch (InterruptedException e){throw new IPException("Bad interrupt: "+e);}
 			else // Thread.yield(): too heavy, for ex. when in a modal dialog
-				try { Thread.sleep(0,1); }
+				try { Thread.sleep(50,100); }
 				catch (InterruptedException e){throw new IPException("Bad interrupt: "+e);}
 			synchronized(this){
 				MessageExecuting last = lastMessageRequest();

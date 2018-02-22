@@ -746,6 +746,7 @@ public abstract class SubprocessEngine extends AbstractPrologEngine{
             //pushDGthread(goalToDo.getCallerThread());
             //System.out.println("CALLING waitForResult (Subprocess):"+this);
             result = goalToDo.waitForResult();
+            // System.out.println("result.succeeded for "+G+": "+result.succeeded);
             if (errorHandler!=null)
             	removeErrorHandling(errorHandler);
             lastSolutionWasUndefined = result.undefined;

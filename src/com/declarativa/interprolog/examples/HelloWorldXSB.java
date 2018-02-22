@@ -6,19 +6,17 @@ Use and distribution, without any warranties, under the terms of the
 Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
 */
 package com.declarativa.interprolog.examples;
-import java.io.File;
 
 import com.declarativa.interprolog.PrologEngine;
 import com.declarativa.interprolog.SolutionIterator;
 import com.declarativa.interprolog.XSBSubprocessEngine;
-import com.declarativa.interprolog.SWISubprocessEngine;
 import com.declarativa.interprolog.util.IPPrologError;
 
-public class HelloWorld{
+public class HelloWorldXSB{
 	public static void main(String args[]) {
-		PrologEngine engine = new SWISubprocessEngine();
+		PrologEngine engine = new XSBSubprocessEngine();
 		//PrologEngine engine = new NativeEngine();
-		//engine.command("import append/3,member/2 from basics"); // Only for XSB Prolog
+		engine.command("import append/3,member/2 from basics"); // Only for XSB Prolog
 		//engine.setDebug(true);
 		Object[] bindings = engine.deterministicGoal(
 			"name(User,UL),append([104, 101, 108, 108, 111, 32], UL, ML), name(Message,ML)", // it execute all...

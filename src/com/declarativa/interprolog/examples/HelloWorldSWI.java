@@ -6,15 +6,13 @@ Use and distribution, without any warranties, under the terms of the
 Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
 */
 package com.declarativa.interprolog.examples;
-import java.io.File;
 
 import com.declarativa.interprolog.PrologEngine;
 import com.declarativa.interprolog.SolutionIterator;
-import com.declarativa.interprolog.XSBSubprocessEngine;
 import com.declarativa.interprolog.SWISubprocessEngine;
 import com.declarativa.interprolog.util.IPPrologError;
 
-public class HelloWorld{
+public class HelloWorldSWI{
 	public static void main(String args[]) {
 		PrologEngine engine = new SWISubprocessEngine();
 		//PrologEngine engine = new NativeEngine();
@@ -27,6 +25,7 @@ public class HelloWorld{
 			"[string(Message)]");
 		String message = (String)bindings[0];
 		System.out.println("\nMessage:"+message);
+		System.out.println("This is interprolog "+PrologEngine.version+" ("+engine.getGitHash()+")"+" on "+engine.getPrologVersion());
 		System.out.println("Undefined?"+engine.lastSolutionUndefined());
 		// the above demonstrates object passing both ways; 
 		// since we may simply concatenate strings, an alternative coding would be:
@@ -72,7 +71,7 @@ public class HelloWorld{
 		while(si.hasNext())
 				System.out.println("next:"+si.next()[0]+",undefined=="+si.lastSolutionUndefined());
 	 */
-	 	System.out.println("Shutting down engine");
+		System.out.println("Shutting down engine");
 		engine.shutdown();
 		System.exit(0);
 

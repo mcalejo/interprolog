@@ -22,6 +22,7 @@ import javax.swing.text.StyleConstants;
 
 import com.declarativa.interprolog.PrologOutputListener;
 import com.declarativa.interprolog.SubprocessEngine;
+import com.declarativa.interprolog.AbstractPrologEngine;
 
 /** A ListenerWindow for a SubprocessEngine. Since Prolog runs as if under a regular OS shell, with standard I/O 
     redirected to the ListenerWindow, this is the best to use during program development. */
@@ -75,7 +76,12 @@ public class SubprocessEngineWindow extends ListenerWindow implements PrologOutp
         prologInput.addKeyListener(new KeyAdapter(){
                 public void keyPressed(KeyEvent e){
                     // Ctrl-C - handle keyboard interrupt
-                    if ((e.getKeyCode() == KeyEvent.VK_C && e.isControlDown())){
+                    if ((e.getKeyCode() == KeyEvent.VK_C && e.isControlDown()
+                         /*
+                           In Windose, hitting ^C many times in Listener
+                           confuses the studio and it has to be killed.
+                         */
+                         && ! AbstractPrologEngine.isWindowsOS())){
                         e.consume();
                         breakAction.actionPerformed(null);
                     }

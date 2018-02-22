@@ -87,14 +87,18 @@ public class LPSEngine extends XSBSubprocessEngine {
 				System.out.println("Entering LPS cycle "+T);
 				System.out.println("Fluents: "+Arrays.toString(fluents));
 				System.out.println("Actions: "+Arrays.toString(actions));
-				// return "[]";
+				// Let's inject a couple observations at cycle 3:
 				if (T==3) return "[time_to_eat(philosopher(0)),time_to_eat(philosopher(1))]";
 				else if (T==10) return null; // end execution
 				else return "[]"; // no input events
 			}
 		});
 		// load and run dining philosophers
-		boolean R = E.go("/Users/mc/git/lps_corner/examples/CLOUT_workshop/diningPhilosophers.pl", "[available(_)]", "[pickup(_,_),putdown(_,_)]");
+		boolean R = E.go(
+				"/Users/mc/git/lps_corner/examples/CLOUT_workshop/diningPhilosophers.pl", 
+				"[available(_)]", // at each cycle, collect state of these fluents...
+				"[pickup(_,_)]" // ...and these events
+				);
 		System.out.println("End result:"+ R );
 		E.shutdown();
 		System.exit(0);

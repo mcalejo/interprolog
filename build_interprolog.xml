@@ -1,37 +1,46 @@
 <!--
 Copyright Miguel Calejo, InterProlog Consulting / Renting Point, Portugal 1998-2017
 
-First, please find your PATH_TO_YOUR_XSB_BIN_DIR, a XSB subdirectory containing its executable, e.g. under XSB_HOME/bin or XSB_HOME/config/.../bin . 
+For XSB, please find your PATH_TO_YOUR_XSB_BIN_DIR, a XSB subdirectory containing its executable, e.g. under XSB_HOME/bin or XSB_HOME/config/.../bin . 
 Then:
-
 	ant -buildfile build_interprolog.xml -DXSB_BIN_DIRECTORY=PATH_TO_YOUR_XSB_BIN_DIR
+For SWI, just:
+	ant -buildfile build_interprolog.xml
+
 
 To try it:
 java -jar interprolog.jar PATH_TO_YOUR_XSB_BIN_DIR
+or
+java -jar interprolog.jar PATH_TO_YOUR_SWI_BIN_DIR
 
-You should get a Prolog listener window. Type Prolog below, see output above. More info at http://interprolog.com/
+You should get a Prolog listener window. Type a Prolog goal into the bottom field, see output above. 
+More info at http://interprolog.com/
 -->
 <project default="interprologJar">
-  <!-- Indicate XSB's config/..../bin directory position here: -->
-  <!--<property name="XSB_BIN_DIRECTORY" location=PATH_TO_YOUR_XSB_BIN_DIR /> -->
+  <!-- Indicate XSB's config/..../bin directory position here, as well as for other Prologs: -->
+  <property name="XSB_BIN_DIRECTORY" location="PATH_TO_YOUR_XSB_BIN_DIR" /> 
   <property name="bin.dir" location="/Users/mc/tempCompiled" />
   <property name="source.dir" location="src" />
   <property name="testsource.dir" location="test" />
   <property name="testresults.dir" value="testresults"/>
   <property name="externalJars" value="externalJars"/>
   <property name="mybase.dir" location="src/.." />
+  <property name="myGit.dir" location="${mybase.dir}" />
   <delete quiet="true" dir="${bin.dir}"/>
   <mkdir dir="${bin.dir}" />
 
 
 	<target name="interprologJar" depends="compileI">
-     <exec executable="svnversion" outputproperty="fidji.build">
-  	 <arg value="."/>
-  	 <arg value="-n"/>
-  	 </exec> 
+    <exec dir="${myGit.dir}" executable="git" outputproperty="fidji.build">
+      <arg value="log" />
+      <arg value="-1" />
+      <arg value="--pretty=format:%h" />
+    </exec> 
      <jar destfile="interprolog.jar" basedir="${bin.dir}" compress="true">
      	<manifest>
-      	<attribute name="Main-Class" value="com.declarativa.interprolog.gui.XSBSubprocessEngineWindow" />
+      	<attribute name="Main-Class" value="com.declarativa.interprolog.gui.SWISubprocessEngineWindow" />
+      	<!-- comment above and uncomment below for XSB Prolog, to set its listener startup Java class: -->
+      	<!--<attribute name="Main-Class" value="com.declarativa.interprolog.gui.XSBSubprocessEngineWindow" />-->
     	<attribute name="Implementation-Version" value="${fidji.build}"/>
      	</manifest>
      </jar>
@@ -39,8 +48,10 @@ You should get a Prolog listener window. Type Prolog below, see output above. Mo
 	</target>
 
 	<target name="compileI">
+		<!-- Comment this out for SWI:
     	<exec dir="${mybase.dir}" executable="${XSB_BIN_DIRECTORY}/xsb" 
-    		inputstring="catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('src/com/declarativa/interprolog/xsb/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('src/com/declarativa/interprolog/gui/visualization.P'), compile('src/com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt." failonerror="true"/>
+    		inputstring="catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('src/com/declarativa/interprolog/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('src/com/declarativa/interprolog/gui/visualization.P'), compile('src/com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt." failonerror="true"/>
+		-->
 		<property environment="environment"/>
 		<javac destdir="${bin.dir}" debug="on" includeantruntime="false" nowarn="on">
 		  <src path="${source.dir}/com/declarativa/interprolog" />
@@ -55,9 +66,8 @@ You should get a Prolog listener window. Type Prolog below, see output above. Mo
 		<copy todir="${bin.dir}/com/declarativa/interprolog">
 			<fileset dir="${source.dir}/com/declarativa/interprolog" includes="*.xwam"/>
 		</copy>
-		<copy file="${source.dir}/com/declarativa/interprolog/tests.P" toDir="${bin.dir}/com/declarativa/interprolog"/>
-		<copy todir="${bin.dir}/com/declarativa/interprolog/xsb">
-			<fileset dir="${source.dir}/com/declarativa/interprolog/xsb" includes="*.xwam"/>
+		<copy todir="${bin.dir}/com/declarativa/interprolog">
+			<fileset dir="${source.dir}/com/declarativa/interprolog" includes="*.P"/>
 		</copy>
 		<copy todir="${bin.dir}/com/declarativa/interprolog/gui">
 			<fileset dir="${source.dir}/com/declarativa/interprolog/gui" includes="*.xwam"/>

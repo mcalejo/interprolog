@@ -16,6 +16,7 @@ import com.declarativa.interprolog.InitiallyFlatTermModel;
 import com.declarativa.interprolog.PrologEngine;
 import com.declarativa.interprolog.TermModel;
 import com.declarativa.interprolog.XSBSubprocessEngine;
+import com.declarativa.interprolog.SWISubprocessEngine;
 import com.declarativa.interprolog.util.IPException;
 import com.declarativa.interprolog.util.OutOfBandTermResource;
 /** Run some tests regarding data passing throughput (bytes/second); tests in the InterProlog 
@@ -26,6 +27,7 @@ walltime in Prolog (cputime not reliable??), walltime in Java!!!*/
 public class PerformanceTester{
 	static AbstractPrologEngine engine;
 	
+	@SuppressWarnings("null")
 	static void prologSerializationTimes(String specBuilderGoal,PrologEngine engine){
 		String G = 
 			"walltime(PreStart),"+specBuilderGoal+",walltime(PreFinish),Pre is PreFinish-PreStart,ipObjectSpec('java.lang.Double',PreD,[Pre],_),"
@@ -58,6 +60,7 @@ public class PerformanceTester{
 	 // ! needed otherwise "choice and trail stack growing"
 
 
+	@SuppressWarnings("null")
 	static void javaSerializationTimes(String message, Object X){
 		try{
 			ByteArrayOutputStream baos=null;
@@ -134,7 +137,6 @@ public class PerformanceTester{
 		System.out.println("Received TermModel list with "+N+" ints in "+(T1-T0)/Nruns+" mS");
 		prologSerializationTimes(specBuilderGoal,engine);
 		javaSerializationTimes("list of ints",LM);
-		
 		
 		System.out.println("\n-----list of terms:");
 		specBuilderGoal = "buildTermList("+N*10+",L), buildInitiallyFlatTermModel(L,LM)";
@@ -248,12 +250,13 @@ public class PerformanceTester{
 	}
 
 	public static void main(String args[]) {
-		String[] prologCommands = com.declarativa.interprolog.gui.ListenerWindow.commandArgs(args);
 		com.declarativa.interprolog.gui.ListenerWindow.commonGreeting();
 		//engine = new NativeEngine();
-		engine = new XSBSubprocessEngine(prologCommands);
+		//engine = new XSBSubprocessEngine();
+		engine = new SWISubprocessEngine();
 		engine.consultFromPackage("tests.P",AbstractPrologEngine.class);
-		engine.deterministicGoal("import append/3,length/2 from basics");
+		if (engine instanceof XSBSubprocessEngine)
+			engine.deterministicGoal("import append/3,length/2 from basics");
 		
 		System.out.println("---------------STARTING without ipUsesNativeNonterminals...--------------");
 		engine.deterministicGoal("retractall(ipUsesNativeNonterminals)");

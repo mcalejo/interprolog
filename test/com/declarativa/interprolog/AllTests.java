@@ -25,10 +25,10 @@ public class AllTests{
 	
 	public static Test suite(){
 		TestSuite suite= new TestSuite("Testing InterProlog"); 
-		//suite.addTestSuite(XSBSubprocessEngineTest.class);
-		//suite.addTest(new XSBNativeEngineTest("testNativeEngine")); // new tests must be added by hand to testNativeEngine
-		//suite.addTestSuite(SWISubprocessEngineTest.class);
-		suite.addTestSuite(YAPSubprocessEngineTest.class);
+		suite.addTestSuite(XSBSubprocessEngineTest.class);
+		suite.addTest(new XSBNativeEngineTest("testNativeEngine")); // new tests must be added by hand to testNativeEngine
+		suite.addTestSuite(SWISubprocessEngineTest.class);
+		//suite.addTestSuite(YAPSubprocessEngineTest.class);
 		return suite;
 	}
 }

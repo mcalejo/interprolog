@@ -26,7 +26,7 @@ import com.declarativa.interprolog.util.VariableNode;
 
 /** Represents a Prolog term, as a tree of TermModel objects, each containing a term node and a children list.
  Implements TreeModel, therefore easily supporting display in a JTree.
-   It includes the funcionality of Prolog's Edinburgh syntax write within toString(); if you wish to reflect
+   It includes the functionality of Prolog's Edinburgh syntax write within toString(); if you wish to reflect
   operator declarations dynamically you should provide a different PrologOperatorsContext object  */
 public class TermModel implements Serializable,TreeModel{
 	private static final long serialVersionUID = 5148989080944522740L;
@@ -35,7 +35,7 @@ public class TermModel implements Serializable,TreeModel{
 	/** public for convenience, but should not be set outside this class;
 	children == null means children == new TermModel[0]*/
 	public TermModel[] children; 
-	/** This should be true only if node=="." or node=="[]" and this represents a list term */
+	/** This should be true only if node=="." or node=="[|]" (on SWI) or node=="[]" and this represents a list term */
 	protected boolean hasListFunctor;
 	
 	private transient Vector<TreeModelListener> treeListeners=null /*new Vector() here doesn't work on deserialization...*/;
@@ -46,12 +46,18 @@ public class TermModel implements Serializable,TreeModel{
 	the root TermModel must have been messaged once with setRoot() */
 	public transient TermModel root; 
 	
+	/** Prolog functor used to construct lists. Although some Prologs (e.g. SWI) may use a different functor, on the Java side
+	 * (and because this class is engine agnostic) we'll always use "." to build lists, 
+	 * but will tolerate [|] in lists coming from Prolog
+	 */
+	public static String LIST_FUNCTOR = ".";
+	
 	static PrologOperatorsContext defaultOperatorContext = new PrologOperatorsContext();
 	
 	public static ObjectExamplePair example(){
 		return new ObjectExamplePair("TermModel",
 			new TermModel(new Integer(1),(TermModel[])null,false),
-			new TermModel(".",new TermModel[2],true)
+			new TermModel(LIST_FUNCTOR,new TermModel[2],true)
 			);
 	}
 	
@@ -380,7 +386,7 @@ public class TermModel implements Serializable,TreeModel{
 		node=n; 
 		hasListFunctor = isAList;
                 
-		if ((hasListFunctor) && !node.equals(".") && !node.equals("[]")) 
+		if ((hasListFunctor) && !node.equals(LIST_FUNCTOR) && !node.equals("[]")) 
 		throw new IPException("Inconsistent list functor");
 	}
 	
@@ -417,14 +423,14 @@ public class TermModel implements Serializable,TreeModel{
 	
 	/** Make a binary (non flat) list */
 	public static TermModel makeList(TermModel[] terms){
-		if (terms==null || terms.length == 0) return new TermModel(".",true);
+		if (terms==null || terms.length == 0) return new TermModel(LIST_FUNCTOR,true);
 		// now nonrecursive:
-		TermModel T = new TermModel(".",new TermModel[2],true);
+		TermModel T = new TermModel(LIST_FUNCTOR,new TermModel[2],true);
 		TermModel R = T;
 		for (int t=0;t<terms.length;t++){
 			T.children[0] = terms[t];
 			if (t<terms.length-1) 
-				T.children[1] = new TermModel(".",new TermModel[2],true);
+				T.children[1] = new TermModel(LIST_FUNCTOR,new TermModel[2],true);
 			else 
 				T.children[1] = new TermModel("[]",true);
 			T = T.children[1];
@@ -438,15 +444,15 @@ public class TermModel implements Serializable,TreeModel{
 	}
 	
 	public static TermModel makeList(Vector<TermModel> terms){
-		if (terms==null || terms.size() == 0) return new TermModel(".",true);
+		if (terms==null || terms.size() == 0) return new TermModel(LIST_FUNCTOR,true);
 		// return makeList(0,terms);
 		// now nonrecursive:
-		TermModel T = new TermModel(".",new TermModel[2],true);
+		TermModel T = new TermModel(LIST_FUNCTOR,new TermModel[2],true);
 		TermModel R = T;
 		for (int t=0;t<terms.size();t++){
 			T.children[0] = terms.elementAt(t);
 			if (t<terms.size()-1) 
-				T.children[1] = new TermModel(".",new TermModel[2],true);
+				T.children[1] = new TermModel(LIST_FUNCTOR,new TermModel[2],true);
 			else 
 				T.children[1] = new TermModel("[]",true);
 			T = T.children[1];
@@ -462,7 +468,7 @@ public class TermModel implements Serializable,TreeModel{
 		} else {
 			cc[1] = makeList(t+1,terms);
 		}
-		return new TermModel(".",cc,true);
+		return new TermModel(LIST_FUNCTOR,cc,true);
 	}
 	
 	protected static TermModel makeList(int t, Vector terms){
@@ -473,7 +479,7 @@ public class TermModel implements Serializable,TreeModel{
 		} else {
 			cc[1] = makeList(t+1,terms);
 		}
-		return new TermModel(".",cc,true);
+		return new TermModel(LIST_FUNCTOR,cc,true);
 	}
 	*/
 	/** Assuming this is a list of numbers, returns a Vector containing one Integer for each number in the list*/
@@ -501,7 +507,7 @@ public class TermModel implements Serializable,TreeModel{
 		return ((Number)node).longValue();
 	}
 
-	/** Returns a close imitation of a Prolog's write, following infix/prefix/postfix operartor declarations. However it does NOT 
+	/** Returns a close imitation of a Prolog's write, following infix/prefix/postfix operator declarations. However it does NOT 
 	add the necessary parenthesis according to precedence declarations; if this is a problem use toString(true) instead */
 	public String toString(){
 		return toString(defaultOperatorContext,false);
@@ -664,8 +670,8 @@ public class TermModel implements Serializable,TreeModel{
 	
 	/** May be an empty list */
 	public boolean isList(){
-		// return (children.length==2 && node.equals("."));
-		return hasListFunctor && (node.equals(".") || node.equals("[]"));
+		// return (children.length==2 && node.equals(LIST_FUNCTOR));
+		return hasListFunctor && (node.equals(LIST_FUNCTOR) || node.equals("[]") || node.equals("[|]"));
 	}
 	
 	public boolean isAtom(){

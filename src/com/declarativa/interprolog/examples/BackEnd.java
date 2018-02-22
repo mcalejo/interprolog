@@ -40,5 +40,6 @@ public class BackEnd{
 			System.out.println("Exception:"+e);
 		}
 		engine.shutdown();
+		System.exit(0);
 	}
 }

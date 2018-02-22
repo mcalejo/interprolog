@@ -111,7 +111,7 @@ public class XSBPeer extends PrologImplementationPeer{
 	}
     
     public String interprologFilename() {
-		return "xsb/interprolog.xwam";
+		return "interprolog.xwam";
 	}
     
 	public String visualizationFilename(){

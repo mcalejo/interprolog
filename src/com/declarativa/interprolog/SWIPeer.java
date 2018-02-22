@@ -28,7 +28,7 @@ public class SWIPeer extends PrologImplementationPeer{
 			return d + File.separator + "swipl";
 		else if (AbstractPrologEngine.isMacOS())
 			return d + File.separator + "swipl";
-		else return d + File.separator + "pl";
+		else return d + File.separator + "swipl";
 	}
 	public String fetchPrologNumericVersion(){
 		Object[] bindings = engine.deterministicGoal(
@@ -79,7 +79,7 @@ public class SWIPeer extends PrologImplementationPeer{
 	}
 	public String interprologFilename()
 	{
-		return "swi/interprolog.pl";
+		return "interprolog.P";
 	}
 	public String visualizationFilename(){
 		return "visualization.P"; // without the extension InterProlog would search for .pl, which does not exist

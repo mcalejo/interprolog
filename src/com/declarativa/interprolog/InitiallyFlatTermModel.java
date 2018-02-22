@@ -38,6 +38,12 @@ public class InitiallyFlatTermModel extends TermModel{
 	public InitiallyFlatTermModel(Object n,TermModel[] c,boolean isAList){
 		super(n,c,isAList);
 	}
+	public static InitiallyFlatTermModel testFromString(String S){
+		InitiallyFlatTermModel R = new InitiallyFlatTermModel();
+		R.canonicalTerm=S; R.stillFlat=true;
+		try{R.inflateFromString();} catch(IOException e){throw new RuntimeException ("??"+e);}
+		return R;
+	}
 	/** Get a TermModel array previously written by Prolog with ipPutTermList(L,FilePath) */
 	public static TermModel[] getTermList(File F){
 		//long T0 = System.currentTimeMillis();
@@ -88,6 +94,11 @@ public class InitiallyFlatTermModel extends TermModel{
 		variables = new HashMap<String,Integer>();
 		ST.wordChars(95,95); // "_" can be in words
 		ST.wordChars(36,36); // "$" can be in words
+		ST.wordChars(42,43); 
+		ST.wordChars(45,45); 
+		ST.wordChars(47,47); 
+		ST.wordChars(58,58); 
+		ST.wordChars(61,61); 
 	}
 	
 	private void inflateWrapup(){
@@ -101,6 +112,7 @@ public class InitiallyFlatTermModel extends TermModel{
 		if (canonicalTerm==null) throw new IPException("Inconsistent canonicalTerm");
 		ST = new MyStreamTokenizer(new StringReader(escapeDoubledQuotes(canonicalTerm)));
 		prepareForInflate();
+		//System.out.println("escapeDoubledQuotes(canonicalTerm):"+escapeDoubledQuotes(canonicalTerm));
 		int NT = parseTerm(ST.nextToken(),this);
 		if (NT!=StreamTokenizer.TT_EOF) 
 		throw new IPException("Extra garbage after "+NT+"in "+canonicalTerm);
@@ -188,6 +200,19 @@ public class InitiallyFlatTermModel extends TermModel{
 			term.node = new VariableNode(lookupVariable(ST.sval)); 
 		else if (NT==StreamTokenizer.TT_WORD || NT==39 /* ' */ ) 
 			term.node = ST.sval.intern(); // avoid proliferation of Strings
+		// special cases for SWI, so it can use the 4 basic arith operators; see also prepareForInflate()
+		else if (NT==43)
+			term.node="+";
+		else if (NT==45)
+			term.node="-";
+		else if (NT==42)
+			term.node="*";
+		else if (NT==47)
+			term.node="/";
+		else if (NT==61)
+			term.node="=";
+		else if (NT==58)
+			term.node=":";
 		else if (NT==39 && ST.sval.equals(".") ) 
 			term.node="."; // list functor...
 		else if (NT==91){ // [ 
@@ -204,7 +229,7 @@ public class InitiallyFlatTermModel extends TermModel{
 				if (NT!=93 /*]*/) throw new IPException("Missing ] in "+canonicalTerm);
 				return ST.nextToken(); // list can not be a functor for a larger term...
 			}
-		}		
+		}
 		else throw new IPException("Unexpected char in "+canonicalTerm+":"+NT);
 		if (!consumedSecond) NT = ST.nextToken();
 		if (NT==40 /* ( */) {

@@ -28,7 +28,8 @@ public abstract class NativeEngineTest extends PrologEngineTest{
     	testBuildTermModel();
     	testNumbers2();
     	testDoubles();
-    	testNaNetc();
+    	testNaNetcFromJava();
+    	testNaNetcFromProlog();
     	testDigestingBadGoal();
     	testDeterministicGoal();
     	testDG2();
