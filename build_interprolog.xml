@@ -8,17 +8,15 @@ For SWI, just:
 	ant -buildfile build_interprolog.xml
 
 
-To try it:
-java -jar interprolog.jar PATH_TO_YOUR_XSB_BIN_DIR
+To try it from this directory (adjust file paths to your system):
+java -classpath interprolog.jar -DSWI_BIN_DIRECTORY=/opt/local/bin com.declarativa.interprolog.gui.SWISubprocessEngineWindow
 or
-java -jar interprolog.jar PATH_TO_YOUR_SWI_BIN_DIR
+java -classpath interprolog.jar -DXSB_BIN_DIRECTORY=YourXSB/config/i386-XXX0/bin com.declarativa.interprolog.gui.XSBSubprocessEngineWindow
 
 You should get a Prolog listener window. Type a Prolog goal into the bottom field, see output above. 
 More info at http://interprolog.com/
 -->
 <project default="interprologJar">
-  <!-- Indicate XSB's config/..../bin directory position here, as well as for other Prologs: -->
-  <property name="XSB_BIN_DIRECTORY" location="PATH_TO_YOUR_XSB_BIN_DIR" /> 
   <property name="bin.dir" location="/Users/mc/tempCompiled" />
   <property name="source.dir" location="src" />
   <property name="testsource.dir" location="test" />
