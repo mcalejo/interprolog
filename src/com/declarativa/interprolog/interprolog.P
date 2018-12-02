@@ -1,9 +1,9 @@
 /* Prolog code to support the Java language interface
 ** By Miguel Calejo, InterProlog Consulting
 ** Float conversion and optimized handle lookup by David Warren, XSB, Inc.
-** Contributions by Vera Pereira, Luis Marco Cruz and Tatyana Vidrevich
+** Contributions by Vera Pereira, Luis Marco Cruz, Tatyana Vidrevich and Michael Kifer
 Contact: info@interprolog.com, www.interprolog.com
-Copyright InterProlog Consulting / Renting Point Lda, Portugal 2014-2017
+Copyright InterProlog Consulting / Renting Point Lda, Portugal 2014-2018
 Use and distribution, without any warranties, under the terms of the
 Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
 IMPORTANT WARNING:  THIS FILE WAS EXTRACTED FROM THE INTERPROLOG JAR FILE.
@@ -197,6 +197,48 @@ before compiling this file call dcg:set_dcg_terminal_functor(interprolog,ipGramm
 %% Some clients prefer to call this through usermod:
 ip_add_lib_dir(D) :- consult:add_lib_dir(D).
 
+prolog_home_dir(D) :- xsb_configuration(install_dir,D).
+
+temporary_filename(TmpFile) :- path_sysop(tmpfilename,TmpFile).
+
+delete_file(File) :- path_sysop(rm,File).
+
+% Synchronously launch subprocess command Cmd, and return its output in file Output
+shell_with_output(Cmd,Output) :- shell(Cmd, none, Output, none, ErrCode), ErrCode==0. % shell(+CmdSpec,-StreamToProc, -StreamFromProc, -ProcStderr, -ErrorCode)
+
+:- dynamic '_$_$file_to_linelist'(_).
+file_to_linelist(File,List) :-
+        retractall('_$_$file_to_linelist'(_)),
+        repeat,
+	(file_read_line_atom(File, LineNL) ->
+            %% strip newline, if present
+            (str_sub('\r\n',LineNL) ->
+                substring(LineNL,0,-3,Line)
+            ; str_sub('\n',LineNL) ->
+                substring(LineNL,0,-2,Line)
+            ; Line = LineNL
+            ),
+            (Line == '' -> true
+            ; assert('_$_$file_to_linelist'(Line))
+            ),
+            fail
+        ; !,
+            findall(X,'_$_$file_to_linelist'(X),List),
+            retractall('_$_$file_to_linelist'(_))
+        ).
+
+%% returns java executable path. if no Java found, then fail
+get_java_executable(Out) :-
+        (platform(OS), OS == windows ->
+            shell_with_output('for /f "usebackq tokens=*" %i in (`where java.exe`) do @echo %i',Output)
+        ;   %% Unixes
+            shell_with_output('which java', Output)
+        ),
+        file_to_linelist(Output,List),
+        close(Output),
+        List = [Out1|_],
+        concat_atom(['"',Out1,'"'],Out).
+
 %% Syntactic emulation of SWI predicate; this variant does NOT postpone execution until after the file is loaded
 initialization(G) :- call(G).
 
@@ -245,6 +287,12 @@ interprolog_callback(_Length,_Bytes,_NewBytes) :-'_$builtin'(255/*INTERPROLOG_CA
 
 %% This is specific for UNIX, does not apply to Windows 95/NT
 getPrologPID(N) :- sys_pid(N).
+
+spawn_process(CmdSpec,ProcId) :- spawn_process(CmdSpec,none,none,none,ProcId). % spawn_process(+CmdSpec,-StreamToProc,-StreamFromProc,-ProcStderrStream,-ProcId)
+
+process_kill(PID) :- process_control(PID,kill).
+
+exists_file(File) :- path_sysop(exists,File).
 
 term_to_atom_IFTM(T,Atom) :- term_to_atom(T,Atom,[quoted(true),ignore_ops(canonical/*true for binary lists*/),numbervars(false)]).
 
@@ -328,144 +376,14 @@ datetimestamp(D) :- datime(Date), fmt_write_string(D,'%d-%02d-%02d at %02d:%02d:
 ipProfilingMessage(M) :- ipIsProfiling, !, write(M), walltime(T), MS is T*1000, write(' '), write(MS), write('mS'), nl.
 ipProfilingMessage(_).
 
+writeln_warning(X) :- writeln(user_warning,X).
+
 minus_infinite(X) :- X is -1/0.
 plus_infinite(X) :- X is 1/0.
 not_a_number(X) :- X is 0/0.
 
 
-%% The following is specific to XSB Prolog, and specifically articulates with Coherent Knowledge proprietary software to be open sourced on Nov 2018
-%%
-%% Dropbox/XSB/bin/xsb -e "['/Users/mc/git/fidji/interprologForJDK/src/com/declarativa/interprolog/xsb/interprolog.P'], spawn_java('/Users/mc/git/fidji/interprologForJDK/ergoStudio.jar')."
-%% ['/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/xjdisplays.P','/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/xj2.P','/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/prologCache.P'].
-%% ipPrologEngine(E), java(E,setDebug(boolean(1))), java('com.declarativa.interprolog.gui.ListenerWindow',initializeVisualizationObjects(E)).
-%% ipPrologEngine(E), java('com.xsb.xj.XJPrologEngine',initPrologLayer(E)).
-%% java(string('Happy 54!'),int(R),length).
-%% ipPrologEngine(E), java(E,R,toString).
-%% ipPrologEngine(E), javaMessage('com.declarativa.interprolog.XSBOnTopSubprocessEngine', string(Result), testDG(E,string('xsb_configuration(install_dir,D)'),string('string(D)'))).
-%% GT=gt(a,[root],[gt(b,[ operation(term(A,B),(java('java.awt.Toolkit',_T,getDefaultToolkit), java(_T,beep)),menu('Test'))],[])]), createXJcomponent(GT,GUI), javaMessage('com.xsb.xj.XJDesktop',TheGUIW,testGUI(GUI)).
-%%   Adding XJ operations "OnTop" BREAKS the GUI
-%% (ipPrologEngine(?E), java(?E,string(?R),toString))@\prologall(interprolog).
-%% (ipPrologEngine(?E), java(?E,setDebug(boolean(1))), javaMessage('com.declarativa.interprolog.XSBOnTopSubprocessEngine', string(?Result), testDG(?E,string('xsb_configuration(install_dir,D)'),string('string(D)'))))@\plg(interprolog).
-%% (ipPrologEngine(?E), javaMessage('com.declarativa.interprolog.XSBOnTopSubprocessEngine', string(?Result), testDG(?E,string('xsb_configuration(install_dir,D)'),string('string(D)'))))@\prologall(interprolog).
-%%spawn_java :-
-%%	spawn_java('/Users/mc/git/fidji/interprologForJDK/ergoStudio.jar').
 
-/** a Java machine is spawned and a PrologEngine (actually XSBOnTopSubprocessEngine) is created on its end 
-hooked to the current engine. javaMessage(...) can be used as normally, as can Java->Prolog "callbacks" with deterministicGoal. 
-Limitations: Prolog output is not available, nor is interrupt(); Java stdout is not available to Prolog, and stderr maps to Prolog's stderr. */
-
-spawn_java(CP) :- spawn_java(CP,_,['','']).
-
-spawn_java(CP,ParamList):- spawn_java(CP,_,ParamList).
-
-%% NOT checking that the third argument is correct because
-%% this is a developer's tool.
-%% JavaArgs: catom of Java parameters
-%% ClassArgs: Atom of Class parameters
-spawn_java(CP,Class,[JavaArgs,ClassArgs]):-
-        (var(Class) ->
-            %% default
-            Class = 'com.coherentknowledge.fidji.XSBOnTopSubprocessEngine'
-        ; true
-        ),
-	%% Debug should be handled using the methods set_debug(on/off) above
-	(ipIsDebugging -> Debug = true
-	; Debug = false
-	),
-	( ipPrologEngine(_) ->
-	    %%ipIsDebugging,
-	    writeln('*** Logic engine is already hooked to a Java machine ***'),
-	    fail
-	; true
-	),
-	xsb_configuration(install_dir,XSBdir), getPrologPID(PrologPID),
-	path_sysop(tmpfilename,TmpFile), path_sysop(tmpfilename,TmpFileFlag),
-
-        (get_java_executable(JavaExec) ->
-            (ipIsDebugging -> writeln('Java executable found: ' = JavaExec)
-            ; true
-            ),
-            concat_atom([JavaExec,
-                         %% args to pass to Java itself
-                         ' ', JavaArgs,
-                         %% the main class
-                         ' -classpath "', CP, '" ', Class,
-                         %% predefined args of the main class
-                         ' "', XSBdir,'" ',
-                         PrologPID,' ',TmpFile,' ',TmpFileFlag,' ',Debug,
-                         %% args to pass to the main() class
-                         ' ', ClassArgs
-                         ],
-                        Cmd),
-            ipProgressMessage(spawning-Cmd),
-            %% no input sent to Prolog, its stdout will get us what
-            %% we need now. Java's stderr will pipe to Prolog's
-            %% spawn_process(Cmd,none,JOutput,none,JavaPID), 
-            
-            spawn_process(Cmd,none,none,none,JavaPID), 
-            ipProgressMessage('Java has hopefully spawn'),
-            process_status(JavaPID,Status), Status == running,
-            waitForFile(TmpFileFlag,JavaPID), % a little lock of our own
-            ipProgressMessage('Java did spawn and wrote a file to Prolog '-TmpFileFlag),
-            asserta(ipJavaMachinePID(JavaPID)),
-            open(TmpFile,read,JOutput),
-            file_read_line_list(JOutput,HostS),
-            file_read_line_atom(JOutput,PortA), 
-            file_read_line_atom(JOutput,IntPortA),
-            file_read_line_atom(JOutput,EngineIDA),
-            close(JOutput),
-            path_sysop(rm,TmpFile), path_sysop(rm,TmpFileFlag),
-            remove_line_ending(HostS,CleanHostS),
-            atom_codes(Host,CleanHostS),
-            read_atom_to_term(PortA,Port),
-            read_atom_to_term(IntPortA,IntPort),
-            read_atom_to_term(EngineIDA,EngineID),
-            ipProgressMessage(java_items-[Host,Port,EngineID]/JavaPID),
-            ipinitialize(Host,Port,EngineID,Debug), 
-            (IntPort \== 0 -> setupWindowsInterrupt(Host,IntPort) ; true),
-            (ipIsDebugging ->
-                write('connected to Java process '),
-                writeln(JavaPID)
-            ; true
-            )
-        ; writeln(user_warning,
-                  '\n\n++Warning[Interprolog] Java installation not found - please install.\n\t\tIf Java is installed, add the path to java.exe\n\t\tto your system''s Path environment variable.\n'),
-            fail
-        ).
-
-%% we could use sleep but this is better and more reactive
-waitForFile(F,JavaPID) :-
-        (waitForFile_(1500000,F) -> true
-        ; writeln(user_warning, '\n\n++Warning[Interprolog]: Java startup timed out: the system is too slow.\n'),
-            process_control(JavaPID,kill),
-            fail
-        ).
-
-waitForFile_(_,F) :- path_sysop(exists,F), !.
-waitForFile_(N,F) :- N>0, NN is N-1, waitForFile_(NN,F).
-
-kill_java :-
-	retract(ipJavaMachinePID(JavaPID)),
-	!, 
-	(ipPrologEngine(E), java(E,deleteTempFiles); true),
-	retractall(ipPrologEngine(_)),
-	retractall(ipsocketstreams(_,_)),
-	retractall(ipObjectSpec(_,_,_,_)),
-	retractall(ipObjectTemplate(_,_,_,_,_)),
-	retractall(ipIsDebugging),
-	process_control(JavaPID,kill).
-kill_java :- 
-	ipIsDebugging -> writeln('*** Java was not being used as a subprocess'),
-	fail.
-
-remove_line_ending(Codes,NewCodes) :-
-        append(Prefix,[Last],Codes),
-        (Last==10;Last==13),
-        !,
-	remove_line_ending(Prefix,NewCodes).
-remove_line_ending(Codes,Codes).
-
-%%%% End of fragment related to Coherent Knowledge proprietary software
 
 %% Add nothing, as XSB goals launched inside the interprolog module have see other modules and usermod
 setupGoalModule(G,G).
@@ -627,7 +545,7 @@ string(A) --> {nonvar(A), atom_codes(A,L)}, [34], anycharacters(L), [34].
 
 :- if(current_prolog_flag(dialect, swi)).
 
-:- use_module(library(charsio)), use_module(library(lists)), use_module(library(system)).
+:- use_module(library(charsio)), use_module(library(lists)), use_module(library(system)), use_module(library(process)).
 
 :- dynamic fjIsErgo/1.
 
@@ -687,8 +605,41 @@ supportsExceptions.
 get_ip_exception_description(error(type_error(callable,_),_), interprolog_interrupt).
 get_ip_exception_description(E, E).
 
+writeln_warning(X) :- writeln(user_error,X).
+
 username(U) :- environ('USER',U), !.
 username('??').
+
+prolog_home_dir(D) :- current_prolog_flag(home,D).
+
+temporary_filename(TmpFile) :- tmp_file(ip_ontop,TmpFile).
+
+platform(OS) :- current_prolog_flag(windows,true), !, OS = windows.
+platform(unix).
+
+% Synchronously launch subprocess command Cmd, and returns a stream with its output
+shell_with_output(Cmd,Out) :- current_prolog_flag(unix,true), !, process_create( path(sh), [ '-c', Cmd ],  [ stdout(pipe(Out))]).
+shell_with_output(Cmd,Out) :- current_prolog_flag(windows,true), !, process_create( path('cmd.exe'), [ '/C', Cmd ],  [ stdout(pipe(Out))]).
+
+spawn_process([Cmd|Args],ProcId) :- !, process_create( path(Cmd), Args,  [process(ProcId)]).
+spawn_process(Cmd,ProcId) :- current_prolog_flag(unix,true), !, process_create( path(sh), [ '-c', Cmd ],  [process(ProcId)]).
+% This does not work due to cmd.exe quotes and space troubles: 
+% spawn_process(Cmd,ProcId) :- current_prolog_flag(windows,true), !, process_create( path('cmd.exe'), [ '/C', Cmd ],  [process(ProcId)]).
+
+get_java_executable(Path) :- platform(windows), !, Path='java.exe'.
+get_java_executable(Path) :- absolute_file_name(path(java), Path, [access(execute)]).
+
+string_replace(String,Pattern,Replacement,Result) :- 
+	atomics_to_string(Items,Pattern,String), atomics_to_string(Items,Replacement,Result).
+
+% Just an empty stub on SWI, as process_create only returns quietly for processes which have not erred:
+process_status(PID,running) :- is_process(PID).
+
+file_read_line_atom(File, LineNL) :- read_line_to_codes(File,Codes), is_list(Codes), atom_codes(LineNL,Codes).
+
+file_read_line_list(Stream,Codes) :- read_line_to_codes(Stream,Codes).
+
+str_sub(Sub,String) :- sub_string(String,_,_,_,Sub), !.
 
 datetimestamp(Stamp) :- datime(Date), Date=..[_,Y,M,D,H,Min,S], term_to_atom(Y/M/D-H:Min:S,Stamp).
 
@@ -721,14 +672,10 @@ not_a_number(X) :- XX is nan, X=XX.
 
 delete_attributes(V) :- del_attrs(V).
 
-ip_add_lib_dir(_D) :- throw(that_is_a_xsb_dependent_call).
-ipInitIsShowing(_GUI) :- throw(that_is_a_xsb_dependent_call).
-ipSetNoprompt(_Old) :- throw(that_is_a_xsb_dependent_call).
-ipRestorePrompt(true) :- throw(that_is_a_xsb_dependent_call).
-spawn_java(_) :- throw(that_is_a_xsb_dependent_call).
-spawn_java(_,_) :- throw(that_is_a_xsb_dependent_call).
-spawn_java(_,_,_) :- throw(that_is_a_xsb_dependent_call).
-kill_java :- throw(that_is_a_xsb_dependent_call).
+ip_add_lib_dir(D) :- throw(that_is_a_xsb_dependent_call(ip_add_lib_dir(D) )).
+ipInitIsShowing(GUI) :- throw(that_is_a_xsb_dependent_call(ipInitIsShowing(GUI))).
+ipSetNoprompt(Old) :- throw(that_is_a_xsb_dependent_call(ipSetNoprompt(Old))).
+ipRestorePrompt(true) :- throw(that_is_a_xsb_dependent_call(ipRestorePrompt(true))).
 ip_error_atom_description(_,_) :- throw(that_is_a_xsb_dependent_call).
 objectKeyValue(_,_,_) :- throw(that_is_a_xsb_dependent_call).
 term2json(_,_) :- throw(that_is_a_xsb_dependent_call).
@@ -741,12 +688,150 @@ json2term(_,_) :- throw(that_is_a_xsb_dependent_call).
 
 /*** GENERIC STUFF - SAME FOR ALL SUPPORTED PROLOGS ***/
 
+%% The following articulates with the OnTopSubprocessEngine Java class
+%%
+%% Dropbox/XSB/bin/xsb -e "['/Users/mc/git/fidji/interprologForJDK/src/com/declarativa/interprolog/xsb/interprolog.P'], spawn_java('/Users/mc/git/fidji/interprologForJDK/ergoStudio.jar')."
+%% ['/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/xjdisplays.P','/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/xj2.P','/Users/mc/git/fidji/interprologForJDK/src/com/xsb/xj/prologCache.P'].
+%% ipPrologEngine(E), java(E,setDebug(boolean(1))), java('com.declarativa.interprolog.gui.ListenerWindow',initializeVisualizationObjects(E)).
+%% ipPrologEngine(E), java('com.xsb.xj.XJPrologEngine',initPrologLayer(E)).
+%% java(string('Happy 54!'),int(R),length).
+%% ipPrologEngine(E), java(E,R,toString).
+%% ipPrologEngine(E), javaMessage('com.declarativa.interprolog.OnTopSubprocessEngine', string(Result), testDG(E,string('xsb_configuration(install_dir,D)'),string('string(D)'))).
+%% GT=gt(a,[root],[gt(b,[ operation(term(A,B),(java('java.awt.Toolkit',_T,getDefaultToolkit), java(_T,beep)),menu('Test'))],[])]), createXJcomponent(GT,GUI), javaMessage('com.xsb.xj.XJDesktop',TheGUIW,testGUI(GUI)).
+%%   Adding XJ operations "OnTop" BREAKS the GUI
+%% (ipPrologEngine(?E), java(?E,string(?R),toString))@\prologall(interprolog).
+%% (ipPrologEngine(?E), java(?E,setDebug(boolean(1))), javaMessage('com.declarativa.interprolog.OnTopSubprocessEngine', string(?Result), testDG(?E,string('xsb_configuration(install_dir,D)'),string('string(D)'))))@\plg(interprolog).
+%% (ipPrologEngine(?E), javaMessage('com.declarativa.interprolog.OnTopSubprocessEngine', string(?Result), testDG(?E,string('xsb_configuration(install_dir,D)'),string('string(D)'))))@\prologall(interprolog).
+%%spawn_java :-
+%%	spawn_java('/Users/mc/git/fidji/interprologForJDK/ergoStudio.jar').
+
+/** a Java machine is spawned and a PrologEngine (actually OnTopSubprocessEngine) is created on its end 
+hooked to the current engine. javaMessage(...) can be used as normally, as can Java->Prolog "callbacks" with deterministicGoal. 
+Limitations: Prolog output is not available, nor is interrupt(); Java stdout is not available to Prolog, and stderr maps to Prolog's stderr. */
+
+spawn_java(CP) :- spawn_java(CP,_,['','']).
+
+spawn_java(CP,ParamList):- spawn_java(CP,_,ParamList).
+
+%% NOT checking that the third argument is correct because
+%% this is a developer's tool.
+%% JavaArgs: catom of Java parameters
+%% ClassArgs: Atom of Class parameters
+spawn_java(CP,Class,[JavaArgs,ClassArgs]):-
+        (var(Class) ->
+            %% default
+            Class = 'com.declarativa.interprolog.OnTopSubprocessEngine'
+        ; true
+        ),
+	%% Debug should be handled using the methods set_debug(on/off) above
+	(ipIsDebugging -> Debug = true
+	; Debug = false
+	),
+	( ipPrologEngine(_) ->
+	    %%ipIsDebugging,
+	    writeln('*** Logic engine is already hooked to a Java machine ***'),
+	    fail
+	; true
+	),
+	prolog_home_dir(PrologDir), getPrologPID(PrologPID),
+	temporary_filename(TmpFile), temporary_filename(TmpFileFlag),
+
+        (get_java_executable(JavaExec) ->
+            (ipIsDebugging -> writeln('Java executable found: ' = JavaExec)
+            ; true
+            ),
+            ((current_prolog_flag(dialect,swi), platform(windows)) ->
+            	Cmd = [JavaExec,JavaArgs,'-classpath',CP,Class,PrologDir,PrologPID,TmpFile,TmpFileFlag,Debug,ClassArgs] ;
+				concat_atom([JavaExec,
+							 %% args to pass to Java itself
+							 ' ', JavaArgs,
+							 %% the main class
+							 ' -classpath "', CP, '" ', Class,
+							 %% predefined args of the main class
+							 ' "', PrologDir,'" ',
+							 PrologPID,' ',TmpFile,' ',TmpFileFlag,' ',Debug,
+							 %% args to pass to the main() class
+							 ' ', ClassArgs
+							 ],
+							Cmd)
+			),
+            ipProgressMessage(spawning-Cmd),
+            %% no input sent to Prolog, its stdout will get us what
+            %% we need now. Java's stderr will pipe to Prolog's
+            %% spawn_process(Cmd,none,JOutput,none,JavaPID), 
+            
+            spawn_process(Cmd,JavaPID), 
+            ipProgressMessage('Java has hopefully spawn'),
+            process_status(JavaPID,Status), Status == running,
+            waitForFile(TmpFileFlag,JavaPID), % a little lock of our own
+            ipProgressMessage('Java did spawn and wrote a file to Prolog '-TmpFileFlag),
+            asserta(ipJavaMachinePID(JavaPID)),
+            open(TmpFile,read,JOutput),
+            file_read_line_list(JOutput,HostS),
+            file_read_line_atom(JOutput,PortA), 
+            file_read_line_atom(JOutput,IntPortA),
+            file_read_line_atom(JOutput,EngineIDA),
+            close(JOutput),
+            delete_file(TmpFile), delete_file(TmpFileFlag),
+            remove_line_ending(HostS,CleanHostS),
+            atom_codes(Host,CleanHostS),
+            atomRead(PortA,Port),
+            atomRead(IntPortA,IntPort),
+            atomRead(EngineIDA,EngineID),
+            ipProgressMessage(java_items-[Host,Port,EngineID]/JavaPID),
+            ipinitialize(Host,Port,EngineID,Debug), 
+            (IntPort \== 0 -> setupWindowsInterrupt(Host,IntPort) ; true),
+            (ipIsDebugging ->
+                write('connected to Java process '),
+                writeln(JavaPID)
+            ; true
+            )
+        ; writeln_warning(
+                  '\n\n++Warning[Interprolog] Java installation not found - please install.\n\t\tIf Java is installed, add the path to java.exe\n\t\tto your system''s Path environment variable.\n'),
+            fail
+        ).
+
+%% we could use sleep but this is better and more reactive
+waitForFile(F,JavaPID) :-
+        (waitForFile_(1500000,F) -> true
+        ; writeln_warning( '\n\n++Warning[Interprolog]: Java startup timed out: the system is too slow.\n'),
+            process_kill(JavaPID),
+            fail
+        ).
+
+waitForFile_(_,F) :- exists_file(F), !.
+waitForFile_(N,F) :- N>0, NN is N-1, waitForFile_(NN,F).
+
+kill_java :-
+	retract(ipJavaMachinePID(JavaPID)),
+	!, 
+	(ipPrologEngine(E), java(E,deleteTempFiles), fail; true),
+	retractall(ipPrologEngine(_)),
+	retractall(ipsocketstreams(_,_)),
+	retractall(ipObjectSpec(_,_,_,_)),
+	retractall(ipObjectTemplate(_,_,_,_,_)),
+	retractall(ipIsDebugging),
+	process_kill(JavaPID).
+kill_java :- 
+	ipIsDebugging -> writeln('*** Java was not being used as a subprocess'),
+	fail.
+
+remove_line_ending(Codes,NewCodes) :-
+        append(Prefix,[Last],Codes),
+        (Last==10;Last==13),
+        !,
+	remove_line_ending(Prefix,NewCodes).
+remove_line_ending(Codes,Codes).
+
+%%%% End of fragment related to OnTopSubprocessEngine
+
+
 :- dynamic(ipUsesNativeNonterminals/0). %% Actually, experimental XSB only (ipUsesNativeNonterminals)
 
 %% To make sure we number Prolog variables uniquely in a session
 ip_inc_var_counter(N) :- conget(ip_var_counter,N), N1 is N+1, conset(ip_var_counter,N1).
 
-:- initialization(conset(ip_var_counter,0)).
+?- initialization(conset(ip_var_counter,0)).
 
 % Can't live without local counters
 create_counter(Counter) :- Counter = '$contador'(0).
@@ -1043,7 +1128,7 @@ extractResultParts(ResultFromJava,Timestamp,Result,Exception,Arguments) :-
 %% Counter/timestamp for javaMessage requests
 ip_inc_jm_counter(N) :- conget(ip_jm_counter,N), N1 is N+1, conset(ip_jm_counter,N1).
 
-:- initialization(conset(ip_jm_counter,0)).
+?- initialization(conset(ip_jm_counter,0)).
 
 
 
@@ -1133,8 +1218,8 @@ java(Target,Result,Message) :-
 
 %% similar to javaMessage, but using termToObjectSpec_ and prepareExceptionTerm to simplify object analysis and synthesis
 java(Target,Result,Exception,Message) :-
-	((Target = int(Ref), integer(Ref)) -> Target_ = Ref ; Target_ = Target),
-	termToObjectSpec_(Target_,RealTarget,input),
+	% ((Target = int(Ref), integer(Ref)) -> Target_ = Ref ; Target_ = Target),
+	termToObjectSpec_(Target,RealTarget,input),
 	( Message = [Index] -> 
             %% to access array elements; could be generalized for multidimensional, by passing an array of ints
 	    MName=get,
@@ -1164,6 +1249,7 @@ termToObjectSpec(ClassName,OS,Mode) :- (Mode == input -> atom(ClassName); true),
 termToObjectSpec(Class-Variable,OS,Mode) :- 
 	(Mode == input -> atom(Class), atom(Variable); true), ipObjectSpec('IPClassVariable',OS,[Class,Variable],_).
 termToObjectSpec(string(X),string(Y),input) :- atom(X), !, X=Y.
+termToObjectSpec(string(X),string(Y),input) :- catch(string(X),_E,fail), !, atom_string(X,Y). % For SWI only
 termToObjectSpec(string(X),_,input) :- domain_error('object term',string(X),termToObjectSpec,1,'not an atom').
 termToObjectSpec(string(X),string(X),output).
 termToObjectSpec(byte(X),OS,input) :- integer(X), !, ipObjectSpec(byte,OS,[X],_).
@@ -1175,9 +1261,12 @@ termToObjectSpec(short(X),OS,output) :- ipObjectSpec('java.lang.Short',OS,[X],_)
 termToObjectSpec(int(X),OS,input) :- integer(X), !, ipObjectSpec(int,OS,[X],_).
 termToObjectSpec(int(X),_,input) :- domain_error('object term',int(X),termToObjectSpec,1,'not an integer').
 termToObjectSpec(int(X),OS,output) :- ipObjectSpec('java.lang.Integer',OS,[X],_).
-termToObjectSpec(long(X),OS,input) :- integer(X), !, ipObjectSpec(long,OS,[X],_).
-termToObjectSpec(long(X),_,input) :- domain_error('object term',long(X),termToObjectSpec,1,'not an integer').
-termToObjectSpec(long(X),OS,output) :- ipObjectSpec('java.lang.Long',OS,[X],_).
+termToObjectSpec(long(X),OS,input) :- integer(X), !, long_to_longpair(X,Pair), ipObjectSpec(long,OS,[Pair],_).
+termToObjectSpec(long(X),_,input) :- domain_error('object term',long(X),termToObjectSpec,1,'not a long integer').
+termToObjectSpec(long(High,Low),OS,input) :- integer(High), integer(Low), !, ipObjectSpec(long,OS,[long(High,Low)],_).
+termToObjectSpec(Pair,OS,output) :- ipObjectSpec('java.lang.Long',OS,[long(High,Low)],_), 
+	(Pair=long(High,Low), !; domain_error('object term',long(_X),termToObjectSpec,1,'output longs must be long(High,Low)')).
+		% TODO: get long(High,Low) with ipObjectSpec('java.lang.Long',OS,[long(High,Low)],_) and convert it to int
 termToObjectSpec(float(X),OS,input) :- float(X), !, ipObjectSpec(float,OS,[X],_).
 termToObjectSpec(float(X),_,input) :- domain_error('object term',float(X),termToObjectSpec,1,'not a float').
 termToObjectSpec(float(X),OS,output) :- ipObjectSpec('java.lang.Float',OS,[X],_).
@@ -1393,25 +1482,32 @@ ipSetReportingWork(true) :- conset(ipReportingWork_,1).
 ipSetReportingWork(false) :- conset(ipReportingWork_,0).
 
 %% New flag to avoid Prolog initiated execution interrupting, such as with timed_call/2
-:- initialization((ipSetSocketsAreBusy(false), ipSetReportingWork(false))).
+?- initialization((ipSetSocketsAreBusy(false), ipSetReportingWork(false))).
 
 /****** Prolog term <-> TermModel specification ******/
+
+% Java longs have (or had in the old days) to be represented as 2 ints in XSB Prolog, so this tests that
+% an integer does not need to be a long, it can be a 32 bit int:
+not_too_long(X) :- integer(X), X >= -(32768*65536), X =< (32768*65536-1). 
+	% X >= - 2147483648, X=<2147483647 : "too big for xwam file"
+
+long_to_longpair(X,long(High,Low)) :- 
+	integer(X),
+	(X>=0 -> High is X>>32, Low is X /\ (65536*65536-1) 
+        ; Low is X /\ (65536*65536-1), High is (X>>32 /\ 32768*65536) \/ 32768*65536).
 
 %% buildTermModel(Term,TermModelSpec) 
 buildTermModel(X,Model) :- copy_term(X,XX), buildTermModel_(XX,Model).
 
 %% Binds variables with iP_Variable_ terms
-buildTermModel_(X,Model) :- integer(X), % X >= - 2147483648, X=<2147483647 "too big for xwam file"
-	X >= -(32768*65536), X =< (32768*65536-1), 
-	!,
+buildTermModel_(X,Model) :- not_too_long(X), !,
 	ipObjectSpec('java.lang.Integer',Integer,[X],_),
 	ipObjectSpec('TermModel',Model,[0,null,Integer],_).
 %% This is fragile regarding maximum range of longs in XSB...?
 buildTermModel_(X,Model) :- integer(X), % bigger int
 	!,
-	(X>=0 -> High is X>>32, Low is X /\ (65536*65536-1) 
-        ; Low is X /\ (65536*65536-1), High is (X>>32 /\ 32768*65536) \/ 32768*65536),
-	ipObjectSpec('java.lang.Long',Integer,[long(High,Low)],_),
+	long_to_longpair(X,Pair),
+	ipObjectSpec('java.lang.Long',Integer,[Pair],_),
 	ipObjectSpec('TermModel',Model,[0,null,Integer],_).
 buildTermModel_(X,Model) :- nonvar(X), X=long(H,L), integer(H), integer(L),
 	!, % hack to encode large longs
@@ -2535,40 +2631,4 @@ ip_may_rethrow_exception(E) :-
 	!,
 	throw(E).
 ip_may_rethrow_exception(_).
-
-:- dynamic '_$_$file_to_linelist'(_).
-file_to_linelist(File,List) :-
-        retractall('_$_$file_to_linelist'(_)),
-        repeat,
-	(file_read_line_atom(File, LineNL) ->
-            %% strip newline, if present
-            (str_sub('\r\n',LineNL) ->
-                substring(LineNL,0,-3,Line)
-            ; str_sub('\n',LineNL) ->
-                substring(LineNL,0,-2,Line)
-            ; Line = LineNL
-            ),
-            (Line == '' -> true
-            ; assert('_$_$file_to_linelist'(Line))
-            ),
-            fail
-        ; !,
-            findall(X,'_$_$file_to_linelist'(X),List),
-            retractall('_$_$file_to_linelist'(_))
-        ).
-
-
-%% returns java executable path. if no Java found, then fail
-get_java_executable(Out) :-
-        (platform(OS), OS == windows ->
-            shell('for /f "usebackq tokens=*" %i in (`where java.exe`) do @echo %i',none,Output,none,ErrCode)
-        ;   %% Unixes
-            shell('which java', none, Output, none, ErrCode)
-        ),
-        file_to_linelist(Output,List),
-        (ErrCode == 0 ->
-            List = [Out1|_],
-            concat_atom(['"',Out1,'"'],Out)
-        ; fail
-        ).
 

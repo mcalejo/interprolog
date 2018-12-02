@@ -16,6 +16,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -367,8 +368,8 @@ public abstract class AbstractPrologEngine implements PrologEngine{
 	    for (File c : D.listFiles())
 	    	deleteAll(c);
 	  }
-	  if (!D.delete())
-		  System.err.println("FAILED to delete "+D);
+	  if (!D.delete() && D.exists()) // Java's cleanup in some scenarios (likely ontop) may have taken care of it already
+			 System.err.println("FAILED to delete "+D);
 	}
 	
 	/** Returns the directory containing the jar with the engine class */
@@ -1376,27 +1377,28 @@ public abstract class AbstractPrologEngine implements PrologEngine{
                     method = findMethod((Class<?>)target,callback.getRealMethodName(),formalArguments);
                     //result = method.invoke(target,localArguments);
                     method.setAccessible(true);
-                    result = method.invoke(target,localArguments);
+                    result = myInvoke(method,null,localArguments);
                 }
-            } else if (target.getClass().isArray()) {
-            	if (callback.getRealMethodName().equals("get"))
-            	// obtain array element
-            		result = Array.get(target, ((Integer)localArguments[0]).intValue());
-            	else if (callback.getRealMethodName().equals("length"))
-            		result = Array.getLength(target);
-            	else
-            		throw new IPException("Bad message to array object:"+callback.getRealMethodName());
             } else {
-                // A regular instance method invocation
-                // Method method = target.getClass().getMethod(callback.methodName,formalArguments);
-                //result = findMethod(target.getClass(),callback.methodName,formalArguments).invoke(target,localArguments);
-                method = findMethod(target.getClass (),callback.getRealMethodName(),formalArguments);
-                method.setAccessible(true);
-                result = method.invoke(target,localArguments);
+            	if (target.getClass().isArray()) {
+                	if (callback.getRealMethodName().equals("get"))
+                	// obtain array element
+                		result = Array.get(target, ((Integer)localArguments[0]).intValue());
+                	else if (callback.getRealMethodName().equals("length"))
+                		result = Array.getLength(target);
+                }
+            	if (result==null){
+	                // A regular instance method invocation
+	                // Method method = target.getClass().getMethod(callback.methodName,formalArguments);
+	                //result = findMethod(target.getClass(),callback.methodName,formalArguments).invoke(target,localArguments);
+	                method = findMethod(target.getClass (),callback.getRealMethodName(),formalArguments);
+	                method.setAccessible(true);
+	                result = myInvoke(method,target,localArguments);
+            	}
             }
             // The result will be an invisible object, except if a String or a wrapper or a TermModel or a serializable array...
             // ...or if this is a getRealJavaObject message sent to the PrologEngine
-            if (result!=null && !(target==this && method.equals(getRealJavaObjectMethod)) && !(result instanceof InvisibleObject) 
+            if (result!=null && !(target==this && getRealJavaObjectMethod.equals(method)) && !(result instanceof InvisibleObject) 
             && !(result instanceof String) && !(result instanceof TermModel) 
             && !(result.getClass().isArray() && isSerializable(result))
             && ! BasicTypeWrapper.instanceOfWrapper(result))
@@ -1424,6 +1426,25 @@ public abstract class AbstractPrologEngine implements PrologEngine{
         else
             return new ResultFromJava (callback.timestamp,result,exceptionMessage,null);
     }
+    
+    /** Preprocess arguments to deal with methods with variant parameters */
+    private static Object myInvoke(Method method,Object target,Object[] localArguments) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException{
+		Object[] readyArgs;
+    	if (method.isVarArgs()){
+    		readyArgs = new Object[method.getParameterTypes().length];
+    		for (int a=0; a<readyArgs.length-1; a++)
+    			readyArgs[a] = localArguments[a];
+    		Object[] variantArgs = new Object[localArguments.length-method.getParameterTypes().length+1];
+    		for (int a=0; a<variantArgs.length; a++)
+    			variantArgs[a] = localArguments[a+readyArgs.length-1];
+    		readyArgs[readyArgs.length-1] = variantArgs;
+    	} else readyArgs = localArguments;
+    	/* System.err.println(method);
+    	System.err.println(" "+Arrays.toString(readyArgs));
+    	System.err.println("  "+Arrays.toString((Object[])readyArgs[readyArgs.length-1])); */
+    	if (target==null) return method.invoke(null,readyArgs);
+    	else return method.invoke(target,readyArgs);
+    }
 	
 	/** Returns true if the object is Serializable or, being an array, its element type is primitive or Serializable */
 	public static boolean isSerializable(Object x){
@@ -1446,10 +1467,14 @@ public abstract class AbstractPrologEngine implements PrologEngine{
             // Let's try to find "by hand" an acceptable method
             Method[] allMethods = targetClass.getMethods ();
             for (int i=0; i<allMethods.length;i++){
-                if (allMethods[i].getName ().equals (name) && allMethods[i].getParameterTypes ().length == formalArguments.length){
+            	Method met = allMethods[i];
+            	boolean compatibleLength = (met.isVarArgs() ? formalArguments.length>=met.getParameterTypes().length : met.getParameterTypes().length == formalArguments.length);
+            	//System.err.println("met:"+met+",met.getParameterTypes().length=="+met.getParameterTypes().length);
+            	int argsToCheck = met.isVarArgs() ? met.getParameterTypes().length-1 : met.getParameterTypes().length;
+                if (compatibleLength && allMethods[i].getName ().equals(name)){
                     boolean compatible = true;
-                    for (int j=0; j<formalArguments.length; j++) {
-                        if (!assignableType (allMethods[i].getParameterTypes ()[j],formalArguments[j])) {
+                    for (int j=0; j<argsToCheck; j++) {
+                        if (!assignableType (met.getParameterTypes()[j],formalArguments[j])) {
                             compatible = false;
                             break;
                         }
@@ -1473,6 +1498,7 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     }
     
     /** Similar to findMethod(), but for constructors rather than regular methods */
+    // TODO: add support for variant parameters
     public static Constructor<?> findConstructor (Class<?> targetClass,Class<?>[] formalArguments) throws NoSuchMethodException{
         Constructor<?> m = null;
         try{
@@ -1525,121 +1551,160 @@ public abstract class AbstractPrologEngine implements PrologEngine{
         else return s.substring (Math.max (dot,dollar)+1,s.length ());
     }
 
-	/** Add a jar to the runtime classpath
-	 * Grabbed from http://stackoverflow.com/questions/1010919/adding-files-to-java-classpath-at-runtime?answertab=active#tab-top */
-	public static void addSoftwareLibrary(File file) throws Exception {
-		Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
-		method.setAccessible(true);
-		method.invoke(ClassLoader.getSystemClassLoader(), new Object[]{file.toURI().toURL()});
-	}
-	
-	public static void addSoftwareLibrary(String file) throws Exception {
-		addSoftwareLibrary(new File(file));
-	}
+    /** Add a jar to the runtime classpath
+    ** MK: Grabbed and modified for the static case from
+    ** https://stackoverflow.com/questions/46694600/java-9-compatability-issue-with-classloader-getsystemclassloader
+    ** (reply #2, answered by Christian Fries)
+    ** Compatible with Java 8-11.
+    ** BUT: classes in the loaded Jar are not found!!
+    */
+    /*
+    public static void addSoftwareLibrary(File file) throws Exception {
+        URL url = file.toURI().toURL();
+        URL urls[] = {};
+        // MK: either of the below parents should work, but they don't in J9
+        //ClassLoader parent=Thread.currentThread().getClass().getClassLoader();
+        //ClassLoader parent = ClassLoader.getPlatformClassLoader();
 
-	/** Register an object with this Engine, so it later can be referred from Prolog without serializing it.
+        // MK: The next 4 lines is an attempt to sneak getPlatformClassLoader()
+        //     past the J8 compiler to test on J9. Does NOT work on J8 or J9*
+        //     The MyClassloader trick does not work.
+        // On J9 use this
+        Method method = ClassLoader.class.getDeclaredMethod("getPlatformClassLoader");
+        // on J8 - use this instead
+        Method method = ClassLoader.class.getDeclaredMethod("getSystemClassLoader");
+        method.setAccessible(true);
+        ClassLoader parent = (ClassLoader)method.invoke(ClassLoader.class);
+        MyClassloader classloader = new MyClassloader(urls, parent);
+
+        classloader.addURL(url);
+    }
+    */
+
+    /** Add a jar to the runtime classpath
+     * Grabbed from
+     * http://stackoverflow.com/questions/1010919/adding-files-to-java-classpath-at-runtime?answertab=active#tab-top
+     *********** DOES NOT WORK WITH Java 9+!!!!!
+     */
+    public static void addSoftwareLibrary(File file) throws Exception {
+        URL url = file.toURI().toURL();
+        double jversion = Double.parseDouble(System.getProperty("java.specification.version"));
+        if (jversion >= 1.9)
+            throw new IPException(" Presently, the \\e2j method addJar(...) works with Java 8 only");
+
+        Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
+        method.setAccessible(true);
+        method.invoke(ClassLoader.getSystemClassLoader(), new Object[]{url});
+    }
+
+    
+    public static void addSoftwareLibrary(String file) throws Exception {
+        addSoftwareLibrary(new File(file));
+    }
+    
+    /** Register an object with this Engine, so it later can be referred from Prolog without serializing it.
 	@param x Object to be registered
 	@return Integer denoting the object. In Prolog one can then refer to it by using the InvisibleObject class.
 	@see InvisibleObject
-	*/
-	public int registerJavaObject(Object x){
-		return knownObjects.registerJavaObject(x);
-	}
-	
-	/** Register an object with this Engine, so it later can be referred from Prolog without serializing it, and returns
+    */
+    public int registerJavaObject(Object x){
+        return knownObjects.registerJavaObject(x);
+    }
+    
+    /** Register an object with this Engine, so it later can be referred from Prolog without serializing it, and returns
 	an InvisibleObject encapsulating the reference.
 	@param x Object to be registered
 	@return InvisibleObject denoting the object. In Prolog one can then refer to it by using the InvisibleObject class.
 	@see InvisibleObject
-	*/
-	public Object makeInvisible(Object x){
-		return knownObjects.makeInvisible(x);
-	}
-	
-	/** Get the object referred by the integer in a InvisibleObject wrapper.
+    */
+    public Object makeInvisible(Object x){
+        return knownObjects.makeInvisible(x);
+    }
+    
+    /** Get the object referred by the integer in a InvisibleObject wrapper.
 	@param o An InvisibleObject
 	@return The real object denoted by o in the context of this engine
 	@see InvisibleObject
-	*/
-	public Object getRealJavaObject(InvisibleObject o){
-		return knownObjects.getRealJavaObject(o);
-	}
-	/** Same as getRealJavaObject(InvisibleObject), but accepts an integer ID as argument instead */
-	public Object getRealJavaObject(int ID){
-		return knownObjects.getRealJavaObject(ID);
-	}
+    */
+    public Object getRealJavaObject(InvisibleObject o){
+        return knownObjects.getRealJavaObject(o);
+    }
+    /** Same as getRealJavaObject(InvisibleObject), but accepts an integer ID as argument instead */
+    public Object getRealJavaObject(int ID){
+        return knownObjects.getRealJavaObject(ID);
+    }
 
-	/** Just returns the object, untouched (but "dereferenced" if called from Prolog). This serves the need to get objects in 
+    /** Just returns the object, untouched (but "dereferenced" if called from Prolog). This serves the need to get objects in 
 	javaMessage because of the way CallbackHandler.doCallback works. For example:
 	ipPrologEngine(_E), stringArraytoList(_O,[miguel,calejo]), 
 	javaMessage(_E,_R,getRealJavaObject(_O)),stringArraytoList(_R,List).
 	... will bind List to [miguel,calejo] and not to an InvisibleObject specification as ordinarly would happen
-	 */
-	public Object getRealJavaObject(Object o){
-		return o;
-	}
-	
-	/**
-	 * Removes reference to the object from the registry. This method should be 
-	 * used with extreme caution since any further prolog calls to the object by means 
-	 * of reference to it in the registry might result in unpredictable behaviour.
-	 */
-	public boolean unregisterJavaObject(int ID){
-		return knownObjects.unregisterJavaObject(ID);
-	}
-
-			/**
-	 * Removes reference to the object from the registry. This method should be 
-	 * used with extreme caution since any further prolog calls to the object by means 
-	 * of reference to it in the registry might result in unpredictable behaviour.
-	 */
-	public boolean unregisterJavaObject(Object obj){
-		return knownObjects.unregisterJavaObject(obj);
-	}
-	
-	/**
-	 * Removes references to objects of class <code>cls</code> from the registry. This method should be 
-	 * used with extreme caution since any further prolog calls to the unregistered objects by means 
-	 * of reference to them in the registry might result in unpredictable behaviour.
-	 */
-	public boolean unregisterJavaObjects(Class<?> cls){
-		return knownObjects.unregisterJavaObjects(cls);
-	}
-        
-	/** If true, the Java execution of javaMessage predicates will happen in new threads (default);
+    */
+    public Object getRealJavaObject(Object o){
+        return o;
+    }
+    
+    /**
+     * Removes reference to the object from the registry. This method should be 
+     * used with extreme caution since any further prolog calls to the object by means 
+     * of reference to it in the registry might result in unpredictable behaviour.
+     */
+    public boolean unregisterJavaObject(int ID){
+        return knownObjects.unregisterJavaObject(ID);
+    }
+    
+    /**
+     * Removes reference to the object from the registry. This method should be 
+     * used with extreme caution since any further prolog calls to the object by means 
+     * of reference to it in the registry might result in unpredictable behaviour.
+     */
+    public boolean unregisterJavaObject(Object obj){
+        return knownObjects.unregisterJavaObject(obj);
+    }
+    
+    /**
+     * Removes references to objects of class <code>cls</code> from the registry. This method should be 
+     * used with extreme caution since any further prolog calls to the unregistered objects by means 
+     * of reference to them in the registry might result in unpredictable behaviour.
+     */
+    public boolean unregisterJavaObjects(Class<?> cls){
+        return knownObjects.unregisterJavaObjects(cls);
+    }
+    
+    /** If true, the Java execution of javaMessage predicates will happen in new threads (default);
 	if false, execution will be under the thread of the most recent deterministicGoal currently executing in Prolog */
-	public void setThreadedCallbacks(boolean yes){
-		threadedCallbacks = yes;
-	}
-	
-	public boolean isThreadedCallbacks(){
-		return threadedCallbacks;
-	} 
-	
-	// test with javaMessage('com.declarativa.interprolog.AbstractPrologEngine',printAllStackTraces).
-	/** If !quite, does not print to the standard (error) output */
-	public static String printAllStackTraces(boolean quiet){
-		StringBuilder S = new StringBuilder();
-		Map<Thread,StackTraceElement[]> stacks = Thread.getAllStackTraces();
-		for (Thread T : stacks.keySet()){
-			S.append(T+"\n");
-			StackTraceElement[] stack = stacks.get(T);
-			for (int i=0; i<stack.length; i++)
-				S.append("  "+ stack[i]+"\n");
-		}
-		if (!quiet) System.err.println(S.toString());
-		return S.toString();
-	}
-	public static String printAllStackTraces(){
-		return printAllStackTraces(false);
-	}
-	
-	public static void printStackTrace(){
-		System.err.println(Arrays.toString(Thread.currentThread().getStackTrace()));
-	}
-
+    public void setThreadedCallbacks(boolean yes){
+        threadedCallbacks = yes;
+    }
+    
+    public boolean isThreadedCallbacks(){
+        return threadedCallbacks;
+    } 
+    
+    // test with javaMessage('com.declarativa.interprolog.AbstractPrologEngine',printAllStackTraces).
+    /** If !quite, does not print to the standard (error) output */
+    public static String printAllStackTraces(boolean quiet){
+        StringBuilder S = new StringBuilder();
+        Map<Thread,StackTraceElement[]> stacks = Thread.getAllStackTraces();
+        for (Thread T : stacks.keySet()){
+            S.append(T+"\n");
+            StackTraceElement[] stack = stacks.get(T);
+            for (int i=0; i<stack.length; i++)
+                S.append("  "+ stack[i]+"\n");
+        }
+        if (!quiet) System.err.println(S.toString());
+        return S.toString();
+    }
+    public static String printAllStackTraces(){
+        return printAllStackTraces(false);
+    }
+    
+    public static void printStackTrace(){
+        System.err.println(Arrays.toString(Thread.currentThread().getStackTrace()));
+    }
+    
     /** We know the engine to be in the Prolog shell, so Prolog goals do not need a postfix. Subclasses 
-    supporting other languages over Prolog may need to redefine this */
+        supporting other languages over Prolog may need to redefine this */
     public boolean inPrologShell(){
     	return true;
     }
@@ -1654,9 +1719,9 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     /** Kludgy method to be used only if a single listener exists */
     public PrologEngineListener getThePrologListener(){
     	if (listeners.isEmpty())
-    		return null;
+            return null;
     	if (!(listeners.size()==1))
-    		System.err.println("Bad use of getThePrologListener");
+            System.err.println("Bad use of getThePrologListener");
     	return listeners.get(0);
     }
     
@@ -1666,9 +1731,9 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     }
     protected void stop(boolean attemptInterrupt){
     	if (usingTimedCall && listeners.size()==1 && listeners.get(0) instanceof EngineController)
-    		((EngineController)listeners.get(0)).stop();
+            ((EngineController)listeners.get(0)).stop();
     	else if (attemptInterrupt)
-    		interrupt();
+            interrupt();
     	else throw new IPException("Inconsistency stopping engine");
     }
     
@@ -1685,25 +1750,25 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     }
     protected synchronized void fireAvailabilityChange(){
     	for (PrologEngineListener L:listeners)
-    		L.availabilityChanged(this);
+            L.availabilityChanged(this);
     }
     /** If ms>0, all future deterministic goals will be executed under control so that the Java side is messaged (with @see#willWork messages) 
-    every ms, with the possibility to abort the Prolog computation, by having the Prolog engine interrupt normal execution periodically;
-     otherwise the goal will run uninterrupted.
-    At startup goals execute without willWork messages.
-    NOTE: This functionality requires a fj_ABORT_NOTRACE/2 predicate in usermod, see comments in interprolog.P */
+        every ms, with the possibility to abort the Prolog computation, by having the Prolog engine interrupt normal execution periodically;
+        otherwise the goal will run uninterrupted.
+        At startup goals execute without willWork messages.
+        NOTE: This functionality requires a fj_ABORT_NOTRACE/2 predicate in usermod, see comments in interprolog.P */
     public void setTimedCallIntervall(int ms){
     	if (!interPrologFileLoaded)
-    		throw new IPException("timed calls can be requested only after initialization");
+            throw new IPException("timed calls can be requested only after initialization");
     	if (ms <= 0) {
-    		deterministicGoal("retractall(ipTimedCallActive(_))");
-    		usingTimedCall = false;
-    		return;
+            deterministicGoal("retractall(ipTimedCallActive(_))");
+            usingTimedCall = false;
+            return;
     	}
     	if (detectsPauses)
-    		System.err.println("Likely inconsistenty: using timed_call and detecting breaks");
+            System.err.println("Likely inconsistenty: using timed_call and detecting breaks");
     	if (!deterministicGoal("retractall(ipTimedCallActive(_)), asserta(ipTimedCallActive("+ms+"))"))
-    		throw new IPException("Could not set up timed calls");
+            throw new IPException("Could not set up timed calls");
     	usingTimedCall = true;
     }
     /** Never call this directly; the Prolog side does call this automatically during timed calls 
@@ -1735,15 +1800,15 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     
     public String toString(){
     	return getClass().getName()+
-    			"\ngoalsToExecute:"+goalsToExecute+
-    			"\nmessagesExecuting:"+messagesExecuting;
+            "\ngoalsToExecute:"+goalsToExecute+
+            "\nmessagesExecuting:"+messagesExecuting;
     }
     
     /** Infinite Java loop, for testing only! 
      * @throws InterruptedException */
     public static void loop() throws InterruptedException{
     	while(true)
-			Thread.sleep(1);
+            Thread.sleep(1);
     }
     public void loop2(){
     	deterministicGoal("java('com.declarativa.interprolog.AbstractPrologEngine',loop)");
@@ -1752,16 +1817,28 @@ public abstract class AbstractPrologEngine implements PrologEngine{
     public synchronized boolean executingOnJavaSide(){
     	return messagesExecuting.size() > goalsToExecute.size(); 
     }
-
+    
     public static double currentTimeSecs() {
         return ((double) System.currentTimeMillis())/1000;
         /*
-          // This does not seem to be giving the current CPU time
-          // for the Studio thread
+        // This does not seem to be giving the current CPU time
+        // for the Studio thread
         ThreadMXBean bean = ManagementFactory.getThreadMXBean( );
         return bean.isCurrentThreadCpuTimeSupported( ) ?
             ((double)bean.getCurrentThreadUserTime())/1000000 
             : ((double) System.currentTimeMillis())/1000;
         */
+    }
+
+    // MK: not used: added for a failed attempt to fix addSoftwareLibrary()
+    public static class MyClassloader extends URLClassLoader {
+
+        public MyClassloader(URL[] urls, ClassLoader parent) {
+            super(urls, parent);
+        }
+        
+        public void addURL(URL url) {
+            super.addURL(url);
+        }
     }
 }
