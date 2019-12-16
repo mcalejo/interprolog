@@ -2,6 +2,13 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+<!-- 
+Use with
+mvn install -DskipTests
+or
+mvn -DargLine="-DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -DSWI_BIN_DIRECTORY=/opt/local/bin" install
+ -->
+
   <groupId>com.interprolog</groupId>
   <artifactId>java-bridge</artifactId>
   <version>0.0.2</version>
@@ -131,7 +138,6 @@
         </executions>
       </plugin>
      
-
 <plugin>
     <groupId>org.codehaus.mojo</groupId>
     <artifactId>build-helper-maven-plugin</artifactId>
