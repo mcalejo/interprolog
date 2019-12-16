@@ -17,12 +17,12 @@ You should get a Prolog listener window. Type a Prolog goal into the bottom fiel
 More info at http://interprolog.com/
 -->
 <project default="interprologJar">
-  <property name="bin.dir" location="/Users/mc/tempCompiled" />
-  <property name="source.dir" location="src" />
-  <property name="testsource.dir" location="test" />
+  <property name="bin.dir" location="target" />
+  <property name="source.dir" location="src/main/java" />
+  <property name="testsource.dir" location="src/test/java" />
   <property name="testresults.dir" value="testresults"/>
   <property name="externalJars" value="externalJars"/>
-  <property name="mybase.dir" location="src/.." />
+  <property name="mybase.dir" location="." />
   <property name="myGit.dir" location="${mybase.dir}" />
   <delete quiet="true" dir="${bin.dir}"/>
   <mkdir dir="${bin.dir}" />
@@ -44,12 +44,13 @@ More info at http://interprolog.com/
      </jar>
      <delete quiet="true" dir="${bin.dir}"/>
 	</target>
-
-	<target name="compileI">
-		<!-- Comment this out for SWI:
+	
+	<target name="xwamFiles" if="XSB_BIN_DIRECTORY">
     	<exec dir="${mybase.dir}" executable="${XSB_BIN_DIRECTORY}/xsb" 
-    		inputstring="catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('src/com/declarativa/interprolog/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('src/com/declarativa/interprolog/gui/visualization.P'), compile('src/com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt." failonerror="true"/>
-		-->
+    		inputstring="catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('src/main/java/com/declarativa/interprolog/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('src/main/java/com/declarativa/interprolog/gui/visualization.P'), compile('src/main/java/com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt." failonerror="true"/>
+	</target>
+
+	<target name="compileI" depends="xwamFiles">
 		<property environment="environment"/>
 		<javac destdir="${bin.dir}" debug="on" includeantruntime="false" nowarn="on">
 		  <src path="${source.dir}/com/declarativa/interprolog" />
@@ -84,10 +85,10 @@ More info at http://interprolog.com/
 <target name="ipjavadoc"> <!-- InterProlog bridge -->
 <javadoc access="public" destdir="ipjavadoc" author="true" version="true" use="true" windowtitle="InterProlog Java Bridge"
 	link = "http://docs.oracle.com/javase/6/docs/api/">      
- <fileset dir="src/com/declarativa/interprolog" defaultexcludes="yes">            
+ <fileset dir="${source.dir}/com/declarativa/interprolog" defaultexcludes="yes">            
     <include name="**/*.java"/>                  
  </fileset>    
- <fileset dir="src/com/xsb/interprolog" defaultexcludes="yes">            
+ <fileset dir="${source.dir}/com/xsb/interprolog" defaultexcludes="yes">            
     <include name="**/*.java"/>                  
  </fileset>    
 </javadoc>

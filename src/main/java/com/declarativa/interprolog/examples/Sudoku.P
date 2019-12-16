@@ -1,0 +1,89 @@
+/*
+Author: Miguel Calejo
+Contact: info@interprolog.com, www.interprolog.com
+Copyright InterProlog Consulting / Renting Point Lda, Portugal 2014
+Use and distribution, without any warranties, under the terms of the
+Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
+*/
+% A Sudoku solver, using backtracking and a simple optimization to bettter select the cells to solve first
+
+% n(Admissible_number)
+n(1). n(2). n(3). n(4). n(5). n(6). n(7). n(8). n(9).
+
+% The puzzle will be represented in relation n(Column,Line,Number) 1..9
+:- dynamic n/3.
+:- import length/2,member/2 from basics. % for XSB Prolog
+
+
+% Line assert predicate: asserts all 9 numbers in a single row
+linha(Y,Numeros) :- length(Numeros,9), linha(Y,Numeros,1).
+linha(_,[],_) :- !.
+linha(Y,[0|Numeros],Xi) :- !, NXi is Xi+1, linha(Y,Numeros,NXi).
+linha(Y,[Ni|Numeros],Xi) :- 
+  integer(Ni), assert(n(Xi,Y,Ni)), NXi is Xi+1,linha(Y,Numeros,NXi).
+
+
+% n(Column,Line,Number,Hypothesis) represents the puzzle plus a partial solution hypothesis
+% Hypothesis is a list with triplets h(X,Y,N)
+n(X,Y,N,_) :- n(X,Y,N).
+n(X,Y,N,L) :- member(h(X,Y,N),L).
+
+% empty(X,Y,Hypothesis) cell is empty in the puzzle + current solution hypothesis
+empty(X,Y,L) :- 
+  n(X), n(Y), not(n(X,Y,_)), 
+  not(member(h(X,Y,_),L)).
+
+% QX,QY is a cell in the 3x3 quadrant containing X,Y
+celulaDoQuadrante(X,Y,QX,QY) :-
+  MinX is (X-1)//3*3+1, MaxX is MinX+2, MinY is (Y-1)//3*3+1, MaxY is MinY+2,
+  MidX is MinX+1, MidY is MinY+1,
+  member(QX,[MinX,MidX,MaxX]), member(QY,[MinY,MidY,MaxY]),
+  not((QX=X,QY=Y)).
+
+% placing N into cell <X,Y> would be compatible with the current partial solution
+compativel(X,Y,N,L) :-
+  n(N), not(n(X,_,N,L)), not(n(_,Y,N,L)),
+  not( (celulaDoQuadrante(X,Y,QX,QY), n(QX,QY,N,L)) ).
+
+% solve the puzzle, obtaining a list of cell value hypothesis h(X,Y,N) for all empty squares
+resolve(L) :- resolve([],L).
+
+% completely solve the puzzle for a partial solution, given a list of hypothesis
+resolve(L,NL) :- empty(X,Y,L), findall(N,compativel(X,Y,N,L),One), One=[N], !,
+  resolve([h(X,Y,N)|L],NL).
+resolve(L,NL) :- empty(X,Y,L), findall(N,compativel(X,Y,N,L),Two), Two=[N1,N2], !,
+  (Escolhido=N1;Escolhido=N2), resolve([h(X,Y,Escolhido)|L],NL).
+% Sem a proxima cláusula não conseguiu resolver o problema31:
+resolve(L,NL) :- empty(X,Y,L), findall(N,compativel(X,Y,N,L),Two), Two=[N1,N2,N3], !,
+  (Escolhido=N1;Escolhido=N2;Escolhido=N3), resolve([h(X,Y,Escolhido)|L],NL).
+resolve(L,NL) :- empty(X,Y,L), compativel(X,Y,N,L), resolve([h(X,Y,N)|L],NL).
+resolve(L,L) :- not(empty(_,_,L)).
+
+
+%%%%% Front-end predicates for the Java side
+
+newPuzzle :- retractall(n(_,_,_)).
+
+assertBoard(Array) :-
+	ipObjectSpec('NxNintArray',Array,Cells,_), length(Cells,81) /* just a check */, retractall(n(_,_,_)), 
+	assertLines(9,Cells).
+
+assertLines(N,[C1,C2,C3,C4,C5,C6,C7,C8,C9|Cells]) :- N>0, !, Line is 10-N, linha(Line,[C1,C2,C3,C4,C5,C6,C7,C8,C9]), NN is N-1, assertLines(NN,Cells).
+assertLines(_,[]).
+
+% Dump the puzzle to a text file, in Prolog format
+savePuzzle(F) :- tell(F), writeln('/* A Sudoku puzzle */'), listing(n/3), told.
+
+% Load a puzzle from a text file, and return the specification for a Java object containing it
+openPuzzle(F,Array) :- 
+	retractall(n(_,_,_)), load_dyn(F), 
+	loadPuzzle(Array).
+	
+loadPuzzle(Array) :- 
+	findall(N, (n(Y),n(X), (n(X,Y,N)->true;N=0)), L), ipObjectSpec('NxNintArray',Array,L,_).
+
+% a preprocessor for hypothesis lists into something closer to an object specification for a CellValue[]
+prepareSolutionCells([],[]).
+prepareSolutionCells([h(X,Y,N)|HL],[Solution|Solutions]) :- 
+	ipObjectSpec('com.declarativa.interprolog.examples.SudokuWindow$CellValue',['X'=X,'Y'=Y,'N'=N],Solution), 
+	prepareSolutionCells(HL,Solutions).
