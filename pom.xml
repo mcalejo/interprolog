@@ -1,34 +1,62 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
 <!-- 
 Use with
-mvn install -DskipTests
+mvn install -DskipTests -DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin
 or
 mvn -DargLine="-DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -DSWI_BIN_DIRECTORY=/opt/local/bin" install
+(pls adapt your local paths to the installed Prolog engines)
+To run a XSB Prolog listener:
+java -DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -cp /Users/mc/.m2/repository/com/interprolog/java-bridge/3.1.1/java-bridge-3.1.1.jar  com.declarativa.interprolog.gui.XSBSubprocessEngineWindow
  -->
 
-  <groupId>com.interprolog</groupId>
-  <artifactId>java-bridge</artifactId>
-  <version>0.0.2</version>
-  <packaging>jar</packaging>
+<groupId>com.interprolog</groupId>
+<artifactId>java-bridge</artifactId>
+<version>3.1.1</version>
+<packaging>jar</packaging>
 
-  <name>interprolog</name>
-  <url>http://maven.apache.org</url>
+<name>interprolog</name>
+<description>Java library for integration with XSB and SWI Prolog</description>
+<url>http://interprolog.com/java-bridge/</url>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+<licenses>
+<license>
+  <name>Apache License, Version 2.0</name>
+  <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+  <distribution>repo</distribution>
+</license>
+</licenses>
 
-    <!-- the main class -->
-    <exec.mainClass>com.declarativa.interprolog.gui.XSBSubprocessEngineWindow</exec.mainClass>
-    
-    	<!--<myproject.version>0.2.304</myproject.version>-->
-    
-  </properties>
+<scm>
+<url>https://github.com/mcalejo/interprolog</url>
+</scm>
 
- <build>
+<properties>
+<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
 
+<build>
+<plugins>
+<plugin>
+  <artifactId>exec-maven-plugin</artifactId>
+  <groupId>org.codehaus.mojo</groupId>
+  <executions>
+    <execution>
+      <id>Generate xwam files</id>
+      <phase>generate-sources</phase>
+      <goals>
+        <goal>exec</goal>
+      </goals>
+      <configuration>
+      	<workingDirectory>${project.build.sourceDirectory}</workingDirectory>
+        <executable>${XSB_BIN_DIRECTORY}/xsb</executable>
+        <commandlineArgs>-e "catch((dcg:set_dcg_terminal_functor(interprolog,ipGrammarChandler), compile('com/declarativa/interprolog/interprolog.P'), dcg:set_dcg_terminal_functor(dcg,'C'), compile('com/declarativa/interprolog/gui/visualization.P'), compile('com/declarativa/interprolog/tests.P')),_,sys_exit(1)), halt."</commandlineArgs>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+</plugins>
 
 <resources> 
     <resource>
@@ -41,146 +69,15 @@ mvn -DargLine="-DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -DSWI_BIN_DIRECT
     </resource>  
 </resources>
 
-    <pluginManagement>
-      <plugins>
-              
-        <!-- We specify the Maven compiler plugin as we need to set it to Java 1.8 -->
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.1</version>
-          <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
 
-    <!--
-    You only need the part below if you want to build your application into a fat executable jar.
-    This is a jar that contains all the dependencies required to run it, so you can just run it with
-    java -jar
-    -->
-    <plugins>
+</build>
 
-		<!-- no longer a fat jar -->
-		 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-            
-            <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>with-dependencies</shadedClassifierName> 
-              <artifactSet>
-                <excludes>
-                
-                 <!--  <exclude>junit:*</exclude> -->
-                </excludes>
-              </artifactSet>
-            
-            
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <manifestEntries>
-                    <Main-Class>${exec.mainClass}</Main-Class>
-                  </manifestEntries>
-                </transformer>
-                
-				<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-              </transformers>
-              <artifactSet>
-              </artifactSet>
-              <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
-              
-              <filters>
-        	    <filter>
-            	  <artifact>*:*</artifact>
-            	  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-            	  </excludes>
-        	    </filter>
-    		  </filters>
-              
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.4.0</version>
-        <executions>
-          <execution>
-            <!--  run the application using the fat jar -->
-            <id>run-app</id>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>java</executable>
-              <arguments>
-                <argument>-jar</argument>
-                <argument>target/${project.artifactId}-${project.version}-fat.jar</argument>
-              </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-     
-<plugin>
-    <groupId>org.codehaus.mojo</groupId>
-    <artifactId>build-helper-maven-plugin</artifactId>
-    <version>1.5</version>
-    <executions>
-      <execution>
-        <id>add-source</id>
-        <phase>generate-sources</phase>
-        <goals>
-          <goal>add-source</goal>
-        </goals>
-        <configuration>
-          <sources>
-             <source>src/main/java</source>
-          </sources>
-        </configuration>
-      </execution>
-      <execution>
-        <id>add-test-source</id>
-        <phase>generate-test-sources</phase>
-        <goals>
-          <goal>add-test-source</goal>
-        </goals>
-        <configuration>
-          <sources>
-            <source>src/test/java</source>
-          </sources>
-        </configuration>
-      </execution>
-    </executions>
-  </plugin>
-
-    </plugins>
-  </build>
-
-
-  <dependencies>
-  
-    <dependency>
+<dependencies>
+	<dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.5</version>
       <scope>test</scope>
-    </dependency>
-  </dependencies>
+	</dependency>
+</dependencies>
 </project>

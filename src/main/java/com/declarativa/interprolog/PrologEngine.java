@@ -17,7 +17,7 @@ import java.io.File;
 public interface PrologEngine{
     
     /** InterProlog version */
-    public final static String version = "3.0.0";
+    public final static String version = "3.1.1";
 
     /** Returns the Prolog system version for this engine */
     public String getPrologVersion();
@@ -28,7 +28,7 @@ public interface PrologEngine{
     // Ideally these should be static methods in the peer or implementation of
     // PrologEngine:s
     /**
-     * Maximum integer value in any supported Prolog. XSB Prolog uses 28 bits.
+     * Maximum integer value in any supported Prolog. XSB Prolog uses 28 bits on 32-bit architectures.
      * Unfortunately, it is pointless to intercept writeInt in
      * <CODE>ObjectOutputStream</CODE>, because
      *   <ol>
