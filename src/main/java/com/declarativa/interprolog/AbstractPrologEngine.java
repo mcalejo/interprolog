@@ -320,6 +320,9 @@ public abstract class AbstractPrologEngine implements PrologEngine{
 		return shutingDown;
 	}
 	
+	public String getTempDirectory() {
+		return tempDirectory.getAbsolutePath();
+	}
 	void makeTempDirectory(){
 		if (tempDirectory!=null)
             throw new IPException("Inconsistency in makeTempDirectory");
