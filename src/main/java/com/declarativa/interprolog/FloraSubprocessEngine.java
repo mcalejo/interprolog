@@ -6,7 +6,10 @@
    Apache License, as per http://www.apache.org/licenses/LICENSE-2.0.html
 */
 package com.declarativa.interprolog;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import com.declarativa.interprolog.util.GoalToExecute;
@@ -494,13 +497,18 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
             copyFileToConsult(filedir+aux_base+filebase+".ftx", requester);
             copyFileToConsult(filedir+aux_base+filebase+".pl", requester);
             copyFileToConsult(filedir+aux_base+filebase+".fdb", requester); 
-            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".xwam", requester);
-            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fld", requester);
-            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".flm", requester);
-            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fls", requester);
-            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fdb", requester); 
+            // these depend on where the file is loaded, so to avoid runtime generation the package should be built for all intended Flora modules
+            try {
+	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".xwam", requester);
+	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fld", requester);
+	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".flm", requester);
+	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fls", requester);
+	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fdb", requester); 
+            } catch (Exception e1) {
+                System.err.println("Package for Flora file "+flrFilename+" lacks files specific for module "+module+", they will be regenerated soon");
+            }
         } catch (Exception e){
-            System.err.println("You should precompile Flora files before packaging them:  "+e);
+            System.err.println("You would get better runtime performance by packaging also the subfiles for Flora file "+flrFilename);
         }
         return copyFileToConsult(flrFilename, requester);
     }
@@ -541,7 +549,48 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
         floraVersion = (String)bindings[1];
         floraBuild = (String)bindings[2];
     }
-	
+    
+    /** Tries to find the XSB Prolog path in the given FLORA/ErgoAI installation
+     * @param floraDir 
+     * @return Path to the Prolog engine; null if not found
+     */
+    public static String getPrologBinDirOf(String floraDir) {
+    	String D=null;
+    	try{
+	        File X = new File(floraDir,".flora_paths");
+	        if (!AbstractPrologEngine.isWindowsOS() && X.exists()){
+	            D = prologBinDirIn(X);
+	        } else {
+	            X = new File(floraDir,".flora_paths.bat");
+	            if (AbstractPrologEngine.isWindowsOS() && X.exists()){
+	                D= prologBinDirIn(X);
+	            } else return null;
+	        }	
+        }
+    	catch(IOException e) {}
+    	if (D==null) return null;
+    	else if (D.endsWith(File.separator+"xsb")){
+    		return D.substring(0, D.length()-4);
+    	} else return null;
+
+    }
+    static String prologBinDirIn(File F) throws IOException{
+        BufferedReader prologFinder = new BufferedReader(new FileReader(F));
+        String line = prologFinder.readLine();
+        String prolog = null;
+        while (prolog==null && line!=null){
+            if (line.startsWith("PROLOG=")) prolog = line.substring(7);
+            else if (line.startsWith("@set PROLOG=")) prolog = line.substring("@set PROLOG=".length()).trim();
+            else line = prologFinder.readLine();
+        }
+        prologFinder.close();
+        if (prolog!=null){
+            if (!AbstractPrologEngine.isWindowsOS() && prolog.startsWith("\"") && prolog.endsWith("\""))
+                prolog=prolog.substring(1,prolog.length()-1);
+        }
+        return prolog;
+    }
+    
     /** Example to create an engine and run a simple query. Source must be edited for correct paths.
      * @param args ignored
      */
