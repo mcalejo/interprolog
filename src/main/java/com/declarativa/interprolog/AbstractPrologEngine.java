@@ -44,6 +44,7 @@ import com.declarativa.interprolog.util.InvisibleObject;
 import com.declarativa.interprolog.util.MessageExecuting;
 import com.declarativa.interprolog.util.MessageFromProlog;
 import com.declarativa.interprolog.util.ObjectRegistry;
+import com.declarativa.interprolog.util.OutOfBandTermResource;
 import com.declarativa.interprolog.util.ResultFromJava;
 import com.declarativa.interprolog.util.ResultFromProlog;
 import com.declarativa.interprolog.util.VariableNode;
@@ -1843,5 +1844,10 @@ public abstract class AbstractPrologEngine implements PrologEngine{
         public void addURL(URL url) {
             super.addURL(url);
         }
+    }
+    
+    /** A temporary file useful to pass bulk data to/from Prolog*/
+    public OutOfBandTermResource makeOutOfBandTermResource(){
+    	return new OutOfBandTermResource(this);
     }
 }

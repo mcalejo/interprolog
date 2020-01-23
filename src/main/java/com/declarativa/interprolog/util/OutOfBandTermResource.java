@@ -28,4 +28,12 @@ public class OutOfBandTermResource {
 	public TermModel[] getTermList(){
 		return InitiallyFlatTermModel.getTermList(resource);
 	}
+	public File getFile(){
+		return resource;
+	}
+	public void put(String s) throws FileNotFoundException{
+		PrintWriter pw = new PrintWriter(resource);
+		pw.println(s);
+		pw.close();
+	}
 }
