@@ -42,6 +42,9 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
     public static final String FLORA_AUX_BASE = ".flora_aux_files/";
     public static final String ERGO_AUX_BASE = ".ergo_aux_files/";
     public static final String ERGOTEXT_EXTENSION = ".ergotxt";
+    
+    public static final String METHOD_LOAD = "load";
+    public static final String METHOD_ADD = "add";
 	
     public boolean isQuietDeterministicGoals() {
         return quietDeterministicGoals;
@@ -337,9 +340,9 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
         else return super.add_lib_goalString();
     }
 	
-    protected boolean doFloraConsult(String unescaped_path,String module){
+    protected boolean doFloraConsult(String unescaped_path,String module,String method){
         if (floraShellStarted && (isFloraSourceFile(unescaped_path)||isErgoSourceFile(unescaped_path)) )
-            return floraCommand("'\\load'('"+unescaped_path+"' >> "+module+")");
+            return floraCommand("'\\"+method+"'('"+unescaped_path+"' >> "+module+")");
         else return false;
     }
 	
@@ -355,20 +358,33 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
     /**
      * @param filename
      * @param module
+     * @param method "add" or "load"
      * @param requester
      * @return actual path of the consulted file
      */
-    public String consultFloraFromPackage(String filename,String module,Object requester){
+    public String consultFloraFromPackage(String filename,String module,String method,Object requester){
+    	if (!(method.equals(METHOD_LOAD)) && !(method.equals(METHOD_ADD)))
+    		throw new RuntimeException("consult method must be add or load, instead:"+method);
         if (!isFloraSourceFile(filename) && !isErgoSourceFile(filename)) 
             throw new RuntimeException("Flora filename required");
         String path = copyFileToConsult(filename, module, requester);
         progressMessage("consultFromPackage:  "+path);
         String epath = unescapedFilePath(path);
-        if ( !doFloraConsult(epath,module) )
+        if ( !doFloraConsult(epath,module,method) )
             throw new IPException("Problem consulting from package archive:  "+path);
         return epath;
     }
 	
+    /**
+     * Loads the file
+     * @param filename
+     * @param module
+     * @param requester Object near whose class the file lies is
+     * @return
+     */
+    public String consultFloraFromPackage(String filename,String module,Object requester){
+    	return consultFloraFromPackage(filename,module,METHOD_LOAD,requester);
+    }
     /*
       parameter with max number of solutions or...
       ... use goal() + AnswerIterator (subclass) ?? in this case, might use something other than -> in handleDeterministicGoal
