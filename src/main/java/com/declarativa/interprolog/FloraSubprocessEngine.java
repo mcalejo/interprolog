@@ -317,8 +317,19 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
     }
     /** \\load a Flora file into a specific module.  */
     public boolean consultFloraAbsolute(File f,String module){
+    	return consultFloraAbsolute(f,module,METHOD_LOAD);
+    }
+    public boolean consultFloraAbsolute(File f,String module,String method){
         if (!isFloraSourceFile(f) && !isErgoSourceFile(f)) return false; 
-        else return floraCommand("'\\load'('"+unescapedFilePath(f.getAbsolutePath())+"' >> "+module+")") ;
+        else {
+        	// treatment for Flora2 bug, which seems to lack \add
+        	if (method.equals(METHOD_LOAD))
+        		return floraCommand("'\\"+method+"'('"+unescapedFilePath(f.getAbsolutePath())+"' >> "+module+")");
+        	else if (method.equals(METHOD_ADD))
+        		return floraCommand("[+ '"+unescapedFilePath(f.getAbsolutePath())+"' >> "+module+"]");
+        	else 
+        		throw new RuntimeException("consult method must be add or load, instead:"+method);
+       }
     }
     /** Same as superclass, but also accepts a Flora file, which is loaded into module 'main'
      * @see com.declarativa.interprolog.AbstractPrologEngine#consultFromPackage(String,Object) */
@@ -370,8 +381,13 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
         String path = copyFileToConsult(filename, module, requester);
         progressMessage("consultFromPackage:  "+path);
         String epath = unescapedFilePath(path);
-        if ( !doFloraConsult(epath,module,method) )
-            throw new IPException("Problem consulting from package archive:  "+path);
+        if (method.equals(METHOD_LOAD)) {
+	        if ( !doFloraConsult(epath,module,method) )
+	            throw new IPException("Problem consulting from package archive:  "+path);
+        } else {
+        	if (!floraCommand("[+ '"+epath+"' >> "+module+"]")) // required for Flora2
+	            throw new IPException("Problem adding from package archive:  "+path);
+       }
         return epath;
     }
 	
