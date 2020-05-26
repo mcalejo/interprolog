@@ -18,9 +18,14 @@ public class BackEnd{
 			return "plain:"+plainText+" plainCount:"+plainCount+" \ncyberText:"+cyberText+" cyberCount="+cyberCount;
 		}
 	}
+	/**
+	 * A short program useful to debug installation problems.
+	 * 
+	 * @param args the XSB base directory
+	 */
 	public static void main(String args[]) {
 		String[] prologCommands = com.declarativa.interprolog.gui.ListenerWindow.commandArgs(args);
-		PrologEngine engine = new XSBSubprocessEngine(prologCommands);
+		PrologEngine engine = new XSBSubprocessEngine(prologCommands,true);
 		engine.deterministicGoal("import reverse/2,length/2 from basics"); //  list processing predicates
 		if (!engine.deterministicGoal("length([1,2],2)")) System.err.println("Bad length/2 predicate!");
 		engine.teachOneObject(new Record()); // send an object prototype to Prolog

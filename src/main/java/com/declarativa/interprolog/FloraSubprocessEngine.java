@@ -531,7 +531,7 @@ public class FloraSubprocessEngine extends XSBSubprocessEngine{
             copyFileToConsult(filedir+aux_base+filebase+".fdb", requester); 
             // these depend on where the file is loaded, so to avoid runtime generation the package should be built for all intended Flora modules
             try {
-	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".xwam", requester);
+	            // xwam files may vary and break things in different environments: copyFileToConsult(filedir+aux_base+filebase+"_"+module+".xwam", requester);
 	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fld", requester);
 	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".flm", requester);
 	            copyFileToConsult(filedir+aux_base+filebase+"_"+module+".fls", requester);

@@ -111,11 +111,11 @@ public class XSBPeer extends PrologImplementationPeer{
 	}
     
     public String interprologFilename() {
-		return "interprolog.xwam";
+		return "interprolog.P";
 	}
     
 	public String visualizationFilename(){
-		return "visualization.xwam";
+		return "visualization.P";
 	}
 	
 	public boolean isInterrupt(Object error){
