@@ -13,7 +13,7 @@ java -DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -cp /Users/mc/.m2/reposito
 	
 <groupId>com.interprolog</groupId>
 <artifactId>java-bridge</artifactId>
-<version>3.1.1</version>
+<version>3.1.2</version>
 <packaging>jar</packaging>
 
 <name>interprolog</name>
