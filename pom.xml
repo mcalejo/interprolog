@@ -129,7 +129,7 @@ java -DXSB_BIN_DIRECTORY=/Users/mc/subversion/XSB/bin -cp /Users/mc/.m2/reposito
 	<dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.5</version>
+      <version>4.13.1</version>
       <scope>test</scope>
 	</dependency>
 </dependencies>
